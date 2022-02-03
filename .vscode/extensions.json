@@ -1,0 +1,17 @@
+{
+	// See http://go.microsoft.com/fwlink/?LinkId=827846
+	// for the documentation about the extensions.json format
+	"recommendations": [
+		"ms-vscode.vscode-typescript-tslint-plugin",
+		"coenraads.bracket-pair-colorizer-2",
+		"eamodio.gitlens",
+		"christian-kohler.path-intellisense",
+		"blairleduc.touch-bar-display",
+		"fatihacet.gitlab-workflow",
+		"joelday.docthis",
+		"mikey.vscode-fileheader",
+		"editorconfig.editorconfig",
+		"aaron-bond.better-comments",
+		"gruntfuggly.todo-tree"
+	]
+}

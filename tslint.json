@@ -1,0 +1,63 @@
+{
+	"rules": {
+		"no-string-throw": true,
+		"no-unused-expression": true,
+		"no-duplicate-variable": true,
+		"curly": true,
+		"class-name": true,
+		"semicolon": [
+			true,
+			"always"
+		],
+		"triple-equals": true,
+		"interface-name": true,
+		"no-empty-interface": true,
+		"no-conditional-assignment": true,
+		"indent": [
+			true,
+			"tabs",
+			2
+		],
+		"prefer-switch": true,
+		"array-type": [
+			true,
+			"generic"
+		],
+		"arrow-return-shorthand": true,
+		"callable-types": true,
+		"member-access": [
+			true,
+			"check-accessor",
+			"check-constructor",
+			"check-parameter-property"
+		],
+		"member-ordering": [
+			true,
+			{
+				"order": [
+					"static-field",
+					"instance-field",
+					"static-method",
+					"instance-method"
+				]
+			}
+		],
+		"no-unsafe-any": true,
+		"no-any": true,
+		"ordered-imports": true,
+		"no-trailing-whitespace": true,
+		"typedef-whitespace": [
+			true,
+			{
+				"call-signature": "nospace",
+				"index-signature": "nospace",
+				"parameter": "nospace",
+				"property-declaration": "nospace",
+				"variable-declaration": "nospace"
+			}
+		],
+		"jsdoc-format": true,
+		"completed-docs": true
+	},
+	"defaultSeverity": "warning"
+}
