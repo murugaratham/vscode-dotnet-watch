@@ -2,8 +2,8 @@
 	"name": "vscode-dotnet-auto-attach",
 	"displayName": ".NET Auto Attach",
 	"description": "Automatically attach the debugger to a dotnet process started with dotnet-watch.",
-	"version": "1.1.1",
-	"publisher": "DennisMaxJung",
+	"version": "1.0.0-pre-release-2",
+	"publisher": "Murugaratham",
 	"engines": {
 		"vscode": "^1.42.1"
 	},
@@ -26,17 +26,20 @@
 		},
 		{
 			"name": "Konrad Müller"
+		},
+		{
+			"name": "Murugaratham"
 		}
 	],
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach"
+		"url": "https://github.com/murugaratham/vscode-dotnet-auto-attach-develop/"
 	},
 	"bugs": {
-		"url": "https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/issues"
+		"url": "https://github.com/murugaratham/vscode-dotnet-auto-attach-develop/issues"
 	},
-	"homepage": "https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach",
+	"homepage": "https://github.com/murugaratham/vscode-dotnet-auto-attach",
 	"activationEvents": [
 		"onDebug",
 		"onLanguage:csharp",
