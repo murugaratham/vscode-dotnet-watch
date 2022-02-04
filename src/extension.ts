@@ -10,7 +10,7 @@
 "use strict";
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from "vscode";
+//import * as vscode from "vscode";
 import DotNetAutoAttach from "./dotNetAutoAttach";
 
 /**
@@ -20,8 +20,8 @@ import DotNetAutoAttach from "./dotNetAutoAttach";
  * @export
  * @param {vscode.ExtensionContext} context
  */
-export function activate(context: vscode.ExtensionContext) {
-	DotNetAutoAttach.Start();
+export function activate(/*context: vscode.ExtensionContext*/) {
+  DotNetAutoAttach.Start();
 }
 
 /**
@@ -30,5 +30,5 @@ export function activate(context: vscode.ExtensionContext) {
  * @export
  */
 export function deactivate() {
-	DotNetAutoAttach.Stop();
+  DotNetAutoAttach.Stop();
 }

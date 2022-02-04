@@ -1,1 +1,1 @@
-declare module "vscode-variables";
+declare module 'vscode-variables';

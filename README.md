@@ -1,3 +1,5 @@
+### Forked from [Dennis Jung VS Code - .NET Auto Attach](https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach)
+
 <h1 align="center">
   <br>
     <img src="https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/raw/master/images/icon.png" alt="logo" width="200">
@@ -54,10 +56,11 @@ When your ".NET: Auto Attach Debug (dotnet-watch)" launch config is set up, you 
 
 The extension currently operates in only one mode - it can launch your project you want to debug with dotnet-watch.
 
-Just like when using the normal C# debugger, you configure the mode with a .vscode/launch.json file in the root directory of your project. 
+Just like when using the normal C# debugger, you configure the mode with a .vscode/launch.json file in the root directory of your project.
 You can create this file manually, or Code will create one for you if you try to run your project and it doesn't exist yet.
 
 #### Sample launch config
+
 ```json
     {
       "type": "DotNetAutoAttach",
@@ -72,6 +75,7 @@ You can create this file manually, or Code will create one for you if you try to
     },
 
 ```
+
 #### Sample launch config for a specific project
 
 The extension will normaly ask you which project should get launched when your workspace contains multiple projects.
@@ -92,6 +96,52 @@ However, you can pre-set which project should get launched.
     },
 
 ```
+
+#### Sample launch config for a compound tasks
+
+The extension will normaly ask you which project should get launched when your workspace contains multiple projects.
+However, you can pre-set which project should get launched.
+
+```json
+[
+	{
+		"type": "DotNetAutoAttach",
+		"request": "launch",
+		"name": ".NET Core Watch: dotnet-test.console",
+		"project": "dotnet-test.console.csproj",
+		"args": [
+
+		],
+		"env": {
+			"ASPNETCORE_ENVIRONMENT": "Development"
+		}
+	},
+	{
+		"type": "DotNetAutoAttach",
+		"request": "launch",
+		"name": ".NET Core Watch: dotnet-test2.console",
+		"project": "dotnet-test2.console.csproj",
+		"args": [
+
+		],
+		"env": {
+			"ASPNETCORE_ENVIRONMENT": "Development"
+		}
+	}
+]
+...
+"compounds": {
+	{
+		"name": "Watch",
+		"stopAll": true,
+		"configurations": [
+			".NET Core Watch: dotnet-test2.console",
+			".NET Core Watch: dotnet-test.console"]
+	}
+}
+
+```
+
 <p align="center">
 <img src="https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/raw/master/images/project-tree.png" alt="Project tree" width="326"><br/>
 </p>

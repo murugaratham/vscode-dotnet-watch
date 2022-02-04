@@ -20,157 +20,146 @@ import ProcessDetail from "../models/ProcessDetail";
  * @class AttachService
  */
 export default class AttachService implements Disposable {
-	/**
-	 * Creates an instance of AttachService.
-	 * @memberof AttachService
-	 */
-	public constructor() {
-		this.disposables = new Set<Disposable>();
-		this.timer = undefined;
-	}
+  /**
+   * Creates an instance of AttachService.
+   * @memberof AttachService
+   */
+  public constructor() {
+    this.disposables = new Set<Disposable>();
+    this.timer = undefined;
+  }
 
-	/**
-	 * The intervall between the poll.
-	 *
-	 * @private
-	 * @static
-	 * @type {number}
-	 * @memberof AttachService
-	 */
-	private static interval: number = 1000;
+  /**
+   * The intervall between the poll.
+   *
+   * @private
+   * @static
+   * @type {number}
+   * @memberof AttachService
+   */
+  private static interval = 1000;
 
-	/**
-	 * A list of all disposables.
-	 *
-	 * @private
-	 * @type {Set<Disposable>}
-	 * @memberof AttachService
-	 */
-	private disposables: Set<Disposable>;
+  /**
+   * A list of all disposables.
+   *
+   * @private
+   * @type {Set<Disposable>}
+   * @memberof AttachService
+   */
+  private disposables: Set<Disposable>;
 
-	/**
-	 * The poll timer.
-	 *
-	 * @private
-	 * @type {NodeJS.Timer}
-	 * @memberof AttachService
-	 */
-	private timer: NodeJS.Timer | undefined;
+  /**
+   * The poll timer.
+   *
+   * @private
+   * @type {NodeJS.Timer}
+   * @memberof AttachService
+   */
+  private timer: NodeJS.Timer | undefined;
 
-	/**
-	 * Get the default DebugConfiguration
-	 *
-	 * @private
-	 * @static
-	 * @returns {DebugConfiguration}
-	 * @memberof AttachService
-	 */
-	private static GetDefaultConfig(): DebugConfiguration {
-		return {
-			type: "coreclr",
-			request: "attach",
-			name: ".NET Core Attach - AUTO",
-		};
-	}
+  /**
+   * Get the default DebugConfiguration
+   *
+   * @private
+   * @static
+   * @returns {DebugConfiguration}
+   * @memberof AttachService
+   */
+  private static GetDefaultConfig(): DebugConfiguration {
+    return {
+      type: "coreclr",
+      request: "attach",
+      name: ".NET Core Attach - AUTO",
+    };
+  }
 
-	/**
-	 * Start the timer to scan for attach.
-	 *
-	 * @memberof AttachService
-	 */
-	public StartTimer(): void {
-		this.timer = setInterval(this.ScanToAttach, AttachService.interval);
-	}
+  /**
+   * Start the timer to scan for attach.
+   *
+   * @memberof AttachService
+   */
+  public StartTimer(): void {
+    this.timer = setInterval(this.ScanToAttach, AttachService.interval);
+  }
 
-	/**
-	 * Stop the timer to scan for attach.
-	 *
-	 * @memberof AttachService
-	 */
-	public StopTimer(): void {
-		if (this.timer) {
-			clearInterval(this.timer);
-		}
-	}
+  /**
+   * Stop the timer to scan for attach.
+   *
+   * @memberof AttachService
+   */
+  public StopTimer(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
+  }
 
-	/**
-	 * Scan processes if its attachable, then try to attach debugger.
-	 *
-	 * @private
-	 * @memberof AttachService
-	 */
-	private ScanToAttach(): void {
-		var processesToScan = new Array<ProcessDetail>();
-		var runningTasks = DotNetAutoAttach.Cache.RunningAutoAttachTasks;
-		runningTasks.forEach((k, v) => {
-			if (v && v.ProcessId) {
-				processesToScan = processesToScan.concat(
-					DotNetAutoAttach.ProcessService.GetProcesses(v.ProcessId.toString())
-				);
-			}
-		});
-		let matchedProcesses = new Array<number>();
+  /**
+   * Scan processes if its attachable, then try to attach debugger.
+   *
+   * @private
+   * @memberof AttachService
+   */
+  private ScanToAttach(): void {
+    let processesToScan = new Array<ProcessDetail>();
+    const runningTasks = DotNetAutoAttach.Cache.RunningAutoAttachTasks;
+    runningTasks.forEach((k, v) => {
+      if (v && v.ProcessId) {
+        processesToScan = processesToScan.concat(DotNetAutoAttach.ProcessService.GetProcesses(v.ProcessId.toString()));
+      }
+    });
+    const matchedProcesses = new Array<number>();
 
-		processesToScan.forEach((p) => {
-			if (
-				p.cml.search("/bin/Debug") !== -1 &&
-				p.cml.endsWith("run") &&
-				DotNetAutoAttach.AttachService.CheckForWorkspace(p)
-			) {
-				const pathRgx = /(.*) run/;
-				let matches = pathRgx.exec(p.cml);
-				let path = "";
-				if (matches && matches.length === 2) {
-					path = matches[1];
-				}
+    processesToScan.forEach((p) => {
+      if (p.cml.search("/bin/Debug") !== -1 && DotNetAutoAttach.AttachService.CheckForWorkspace(p)) {
+        const pathRgx = /(.*)(run|--launch-profile.+|)/g;
+        const matches = pathRgx.exec(p.cml);
+        let path = "";
+        if (matches && matches.length === 3) {
+          path = matches[1];
+          matchedProcesses.push(p.pid);
+        }
 
-				matchedProcesses.push(p.pid);
+        DotNetAutoAttach.DebugService.AttachDotNetDebugger(p.pid, AttachService.GetDefaultConfig(), path);
+      }
+    });
+    if (matchedProcesses.length > 0) {
+      //try detect if it's due to restart
+      DotNetAutoAttach.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
+    }
+  }
 
-				DotNetAutoAttach.DebugService.AttachDotNetDebugger(
-					p.pid,
-					AttachService.GetDefaultConfig(),
-					path
-				);
-			}
-		});
-		DotNetAutoAttach.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
-	}
+  /**
+   * Check the process if it's within the current workspace.
+   *
+   * @private
+   * @static
+   * @param {ProcessDetail} process
+   * @returns {boolean}
+   * @memberof AttachService
+   */
+  private CheckForWorkspace(process: ProcessDetail): boolean {
+    if (vscode.workspace.workspaceFolders) {
+      for (const element of vscode.workspace.workspaceFolders) {
+        const path = vscode.Uri.file(
+          process.cml.replace("dotnet exec ", "").replace('"dotnet" exec ', "").replace('"', "")
+        );
+        if (path.fsPath.includes(element.uri.fsPath)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
-	/**
-	 * Check the process if it's within the current workspace.
-	 *
-	 * @private
-	 * @static
-	 * @param {ProcessDetail} process
-	 * @returns {boolean}
-	 * @memberof AttachService
-	 */
-	private CheckForWorkspace(process: ProcessDetail): boolean {
-		if (vscode.workspace.workspaceFolders) {
-			for (var element of vscode.workspace.workspaceFolders) {
-				var path = vscode.Uri.file(
-					process.cml
-						.replace("dotnet exec ", "")
-						.replace('"dotnet" exec ', "")
-						.replace('"', "")
-				);
-				if (path.fsPath.includes(element.uri.fsPath)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Dispose.
-	 *
-	 * @memberof AttachService
-	 */
-	public dispose(): void {
-		this.disposables.forEach((k) => {
-			k.dispose();
-		});
-		this.StopTimer();
-	}
+  /**
+   * Dispose.
+   *
+   * @memberof AttachService
+   */
+  public dispose(): void {
+    this.disposables.forEach((k) => {
+      k.dispose();
+    });
+    this.StopTimer();
+  }
 }
