@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.1.1] - 2020-03-08
 
 ### Fixed
+
 - Changed publisher reference of csharp extension to the changed one.
 
 ## [1.1.0] - 2019-02-23
 
 ### Added
-- Added project property to DotNetAutoAttach DebugConfiguration of launch.json. The project property allow to start a specific project and let you bypass the quick pick menu.
+
+- Added project property to DotNetWatch DebugConfiguration of launch.json. The project property allow to start a specific project and let you bypass the quick pick menu.
 
 ### Changed
 
@@ -24,11 +26,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - InitalConfiguration & launch.json are now generated if they were not present.
 - Fixed bug where dotnet watch could not rebuild a project if debugger hangs on breakpoint.
 
-
 ## 1.0.0 - 2018-09-25
 
 - Initial release
 
-[Unreleased]: https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/compare/v1.1.1...develop
+[unreleased]: https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/compare/v1.1.1...develop
 [1.1.0]: https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/compare/v1.0.0...v1.1.0
 [1.1.1]: https://gitlab.com/dennismaxjung/vscode-dotnet-auto-attach/compare/v1.1.0...v1.1.1

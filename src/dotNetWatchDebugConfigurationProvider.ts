@@ -1,5 +1,5 @@
 /*
- * @file Contains the DotNetAutoAttachDebugConfigurationProvider.
+ * @file Contains the DotNetWatchDebugConfigurationProvider.
  * @Author: Dennis Jung
  * @Author: Konrad Müller
  * @Date: 2019-02-16 22:01:33
@@ -8,31 +8,30 @@
  */
 
 import { DebugConfiguration, DebugConfigurationProvider, ProviderResult, workspace, WorkspaceFolder } from "vscode";
-import DotNetAutoAttach from "./dotNetAutoAttach";
-import IDotNetAutoAttachDebugConfiguration from "./interfaces/IDotNetAutoAttachDebugConfiguration";
+import DotNetWatch from "./dotNetWatch";
+import IDotNetWatchDebugConfiguration from "./interfaces/IDotNetWatchDebugConfiguration";
 
 /**
- * The DotNetAutoAttachDebugConfigurationProvider.
+ * The DotNetWatchDebugConfigurationProvider.
  *
  * @export
- * @class DotNetAutoAttachDebugConfigurationProvider
+ * @class DotNetWatchDebugConfigurationProvider
  * @implements {DebugConfigurationProvider}
  */
-export default class DotNetAutoAttachDebugConfigurationProvider implements DebugConfigurationProvider {
+export default class DotNetWatchDebugConfigurationProvider implements DebugConfigurationProvider {
   /**
-   * Get the default DebugConfiguration for DotNetAutoAttach.
+   * Get the default DebugConfiguration for DotNetWatch.
    *
    * @private
    * @static
    * @returns {DebugConfiguration}
-   * @memberof DotNetAutoAttachDebugConfigurationProvider
+   * @memberof DotNetWatchDebugConfigurationProvider
    */
-  private static GetDefaultDotNetAutoAttachDebugConfig(project?: string): DebugConfiguration {
+  private static GetDefaultDotNetWatchDebugConfig(project?: string): DebugConfiguration {
     const defaultConfig: DebugConfiguration = {
-      type: "DotNetAutoAttach",
+      type: "DotNetWatch",
       request: "launch",
       name: ".NET Core Watch",
-      args: [],
       env: {
         ASPNETCORE_ENVIRONMENT: "Development",
         //wait for this pr: https://github.com/dotnet/sdk/pull/23280/files
@@ -41,7 +40,7 @@ export default class DotNetAutoAttachDebugConfigurationProvider implements Debug
     };
 
     if (project && 0 !== project.length) {
-      defaultConfig.project = project;
+      defaultConfig.project = `${project}.csproj`;
       defaultConfig.name += `: ${project}`;
     }
 
@@ -61,8 +60,8 @@ export default class DotNetAutoAttachDebugConfigurationProvider implements Debug
    */
   public resolveDebugConfiguration(
     folder: WorkspaceFolder | undefined,
-    debugConfiguration: IDotNetAutoAttachDebugConfiguration
-  ): ProviderResult<IDotNetAutoAttachDebugConfiguration> {
+    debugConfiguration: IDotNetWatchDebugConfiguration
+  ): ProviderResult<IDotNetWatchDebugConfiguration> {
     if (debugConfiguration.env) {
       debugConfiguration.env["DOTNET_WATCH_RESTART_ON_RUDE_EDIT"] = "true";
     }
@@ -79,7 +78,7 @@ export default class DotNetAutoAttachDebugConfigurationProvider implements Debug
 
     if (folder) {
       debugConfiguration.workspace = folder;
-      DotNetAutoAttach.TaskService.StartDotNetWatchTask(debugConfiguration);
+      DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
     }
     return undefined;
   }
@@ -89,38 +88,38 @@ export default class DotNetAutoAttachDebugConfigurationProvider implements Debug
    * registered for the same type, debug configurations are concatenated in arbitrary order.
    * @param {(WorkspaceFolder | undefined)} folder The workspace folder for which the configurations are used or `undefined` for a folderless setup.
    * @param {CancellationToken} [token] A cancellation token.
-   * @returns {ProviderResult<IDotNetAutoAttachDebugConfiguration[]>} An array of [debug configurations](#DebugConfiguration).
-   * @memberof DotNetAutoAttachDebugConfigurationProvider
+   * @returns {ProviderResult<IDotNetWatchDebugConfiguration[]>} An array of [debug configurations](#DebugConfiguration).
+   * @memberof DotNetWatchDebugConfigurationProvider
    */
   public provideDebugConfigurations(
     folder: WorkspaceFolder | undefined
-  ): ProviderResult<Array<IDotNetAutoAttachDebugConfiguration>> {
+  ): ProviderResult<Array<IDotNetWatchDebugConfiguration>> {
     if (folder) {
       return Promise.resolve(
-        workspace.findFiles("**/*.csproj").then((k) => {
+        workspace.findFiles("**/*.csproj").then(async (k) => {
           const tmp = k.filter((m) => m.toString().startsWith(folder.uri.toString()));
           if (tmp.length > 1) {
-            return DotNetAutoAttach.UiService.OpenMultiSelectProjectQuickPick(tmp).then((m) => {
+            return await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(tmp).then((m) => {
               if (m && m.length !== 0) {
                 return m.map((o) =>
-                  DotNetAutoAttachDebugConfigurationProvider.GetDefaultDotNetAutoAttachDebugConfig(o.label)
-                ) as Array<IDotNetAutoAttachDebugConfiguration>;
+                  DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(o.label)
+                ) as Array<IDotNetWatchDebugConfiguration>;
               } else {
-                return new Array<IDotNetAutoAttachDebugConfiguration>(
-                  DotNetAutoAttachDebugConfigurationProvider.GetDefaultDotNetAutoAttachDebugConfig() as IDotNetAutoAttachDebugConfiguration
+                return new Array<IDotNetWatchDebugConfiguration>(
+                  DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
                 );
               }
             });
           } else {
-            return new Array<IDotNetAutoAttachDebugConfiguration>(
-              DotNetAutoAttachDebugConfigurationProvider.GetDefaultDotNetAutoAttachDebugConfig() as IDotNetAutoAttachDebugConfiguration
+            return new Array<IDotNetWatchDebugConfiguration>(
+              DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
             );
           }
         })
       );
     }
-    return new Array<IDotNetAutoAttachDebugConfiguration>(
-      DotNetAutoAttachDebugConfigurationProvider.GetDefaultDotNetAutoAttachDebugConfig() as IDotNetAutoAttachDebugConfiguration
+    return new Array<IDotNetWatchDebugConfiguration>(
+      DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
     );
   }
 }

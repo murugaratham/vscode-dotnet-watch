@@ -1,7 +1,7 @@
 {
-  "name": "vscode-dotnet-auto-attach-develop",
-  "displayName": ".NET Auto Attach",
-  "description": "Automatically attach the debugger to a dotnet process started with dotnet-watch.",
+  "name": "vscode-dotnet-watch",
+  "displayName": ".NET Watch",
+  "description": "Dotnet watch with automatic debugger attach",
   "version": "1.0.1",
   "publisher": "Murugaratham",
   "engines": {
@@ -19,7 +19,7 @@
     "multi-root ready",
     "dotnet watch"
   ],
-  "icon": "images/icon.png",
+  "icon": "images/watch-debug.png",
   "contributors": [
     {
       "name": "Dennis Jung"
@@ -34,12 +34,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/murugaratham/vscode-dotnet-auto-attach-develop/"
+    "url": "https://github.com/murugaratham/vscode-dotnet-watch/"
   },
   "bugs": {
-    "url": "https://github.com/murugaratham/vscode-dotnet-auto-attach-develop/issues"
+    "url": "https://github.com/murugaratham/vscode-dotnet-watch/issues"
   },
-  "homepage": "https://github.com/murugaratham/vscode-dotnet-auto-attach-develop",
+  "homepage": "https://github.com/murugaratham/vscode-dotnet-watch",
   "activationEvents": [
     "onDebug",
     "onLanguage:csharp",
@@ -49,8 +49,8 @@
   "contributes": {
     "debuggers": [
       {
-        "type": "DotNetAutoAttach",
-        "label": ".NET Auto Attach",
+        "type": "DotNetWatch",
+        "label": ".NET Watch",
         "configurationAttributes": {
           "launch": {
             "properties": {
@@ -80,10 +80,10 @@
         },
         "configurationSnippets": [
           {
-            "label": ".NET: Auto Attach Debug (dotnet-watch)",
-            "description": "A new configuration for launching .NET Auto Attach",
+            "label": ".NET: Watch Debug (dotnet-watch)",
+            "description": "A new configuration for launching .NET watch",
             "body": {
-              "type": "DotNetAutoAttach",
+              "type": "DotNetWatch",
               "request": "launch",
               "name": ".NET Core Watch",
               "args": [],

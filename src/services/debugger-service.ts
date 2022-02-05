@@ -10,7 +10,7 @@
 "use strict";
 import * as vscode from "vscode";
 import { debug, Disposable } from "vscode";
-import DotNetAutoAttach from "../dotNetAutoAttach";
+import DotNetWatch from "../dotNetWatch";
 
 /**
  * The DebuggerService. Provide functionality for starting, and manageing debug sessions.
@@ -47,9 +47,9 @@ export default class DebuggerService implements Disposable {
    * @memberof DebuggerService
    */
   private static AddDebugSession(session: vscode.DebugSession): void {
-    DotNetAutoAttach.Cache.RunningDebugs.forEach((k, v) => {
+    DotNetWatch.Cache.RunningDebugs.forEach((k, v) => {
       if (v.name === session.name) {
-        DotNetAutoAttach.Cache.RunningDebugs.setValue(k, session);
+        DotNetWatch.Cache.RunningDebugs.setValue(k, session);
       }
     });
   }
@@ -63,11 +63,11 @@ export default class DebuggerService implements Disposable {
    * @memberof DebuggerService
    */
   private static TryToRemoveDisconnectedDebugSession(session: vscode.DebugSession): void {
-    DotNetAutoAttach.Cache.RunningDebugs.forEach((k, v) => {
+    DotNetWatch.Cache.RunningDebugs.forEach((k, v) => {
       if (v.name === session.name) {
         setTimeout(() => {
-          DotNetAutoAttach.Cache.RunningDebugs.remove(k);
-          DotNetAutoAttach.Cache.DisconnectedDebugs.add(k);
+          DotNetWatch.Cache.RunningDebugs.remove(k);
+          DotNetWatch.Cache.DisconnectedDebugs.add(k);
         }, 2000);
       }
     });
@@ -82,10 +82,10 @@ export default class DebuggerService implements Disposable {
    */
   private DisconnectDebugger(debugSessionId: number): void {
     // Disconnect old debug
-    const debugSession = DotNetAutoAttach.Cache.RunningDebugs.getValue(debugSessionId);
+    const debugSession = DotNetWatch.Cache.RunningDebugs.getValue(debugSessionId);
     if (debugSession) {
       console.log(debugSession);
-      DotNetAutoAttach.Cache.RunningDebugs.remove(debugSessionId);
+      DotNetWatch.Cache.RunningDebugs.remove(debugSessionId);
       debugSession.customRequest("disconnect");
     }
   }
@@ -99,7 +99,7 @@ export default class DebuggerService implements Disposable {
    */
   public DisconnectOldDotNetDebugger(matchedPids: Array<number>) {
     // If matched processes does not have running debugs then we need to kill this debug
-    DotNetAutoAttach.Cache.RunningDebugs.keys().forEach((runningDebug) => {
+    DotNetWatch.Cache.RunningDebugs.keys().forEach((runningDebug) => {
       if (matchedPids.indexOf(runningDebug) < 0) {
         this.DisconnectDebugger(runningDebug);
       }
@@ -114,28 +114,22 @@ export default class DebuggerService implements Disposable {
    * @memberof DebuggerService
    */
   public AttachDotNetDebugger(pid: number, baseConfig: vscode.DebugConfiguration, path: string): void {
-    const task = DotNetAutoAttach.Cache.RunningAutoAttachTasks.values().find((t) =>
-      path.startsWith(t.ProjectFolderPath)
-    );
-    if (
-      !DotNetAutoAttach.Cache.RunningDebugs.containsKey(pid) &&
-      !DotNetAutoAttach.Cache.DisconnectedDebugs.has(pid) &&
-      task
-    ) {
+    const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) => path.startsWith(t.ProjectFolderPath));
+    if (!DotNetWatch.Cache.RunningDebugs.containsKey(pid) && !DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
       baseConfig.processId = String(pid);
       baseConfig.name = task.Project + " - " + baseConfig.name + " - " + baseConfig.processId;
-      DotNetAutoAttach.Cache.RunningDebugs.setValue(pid, {
+      DotNetWatch.Cache.RunningDebugs.setValue(pid, {
         name: baseConfig.name,
       } as vscode.DebugSession);
       vscode.debug.startDebugging(undefined, baseConfig);
-    } else if (DotNetAutoAttach.Cache.DisconnectedDebugs.has(pid) && task) {
-      DotNetAutoAttach.Cache.RunningDebugs.setValue(pid, {
+    } else if (DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
+      DotNetWatch.Cache.RunningDebugs.setValue(pid, {
         name: "",
       } as vscode.DebugSession);
-      DotNetAutoAttach.Cache.DisconnectedDebugs.delete(pid);
+      DotNetWatch.Cache.DisconnectedDebugs.delete(pid);
       task.Terminate();
       setTimeout(() => {
-        DotNetAutoAttach.Cache.RunningDebugs.remove(pid);
+        DotNetWatch.Cache.RunningDebugs.remove(pid);
       }, 50);
     }
   }

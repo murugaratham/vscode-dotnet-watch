@@ -10,7 +10,7 @@
 import { clearInterval, setInterval } from "timers";
 import { DebugConfiguration, Disposable } from "vscode";
 import * as vscode from "vscode";
-import DotNetAutoAttach from "../dotNetAutoAttach";
+import DotNetWatch from "../dotNetWatch";
 import ProcessDetail from "../models/ProcessDetail";
 
 /**
@@ -101,16 +101,16 @@ export default class AttachService implements Disposable {
    */
   private ScanToAttach(): void {
     let processesToScan = new Array<ProcessDetail>();
-    const runningTasks = DotNetAutoAttach.Cache.RunningAutoAttachTasks;
+    const runningTasks = DotNetWatch.Cache.RunningAutoAttachTasks;
     runningTasks.forEach((k, v) => {
       if (v && v.ProcessId) {
-        processesToScan = processesToScan.concat(DotNetAutoAttach.ProcessService.GetProcesses(v.ProcessId.toString()));
+        processesToScan = processesToScan.concat(DotNetWatch.ProcessService.GetProcesses(v.ProcessId.toString()));
       }
     });
     const matchedProcesses = new Array<number>();
 
     processesToScan.forEach((p) => {
-      if (p.cml.search("/bin/Debug") !== -1 && DotNetAutoAttach.AttachService.CheckForWorkspace(p)) {
+      if (p.cml.search("/bin/Debug") !== -1 && DotNetWatch.AttachService.CheckForWorkspace(p)) {
         const pathRgx = /(.*)(run|--launch-profile.+|)/g;
         const matches = pathRgx.exec(p.cml);
         let path = "";
@@ -119,12 +119,12 @@ export default class AttachService implements Disposable {
           matchedProcesses.push(p.pid);
         }
 
-        DotNetAutoAttach.DebugService.AttachDotNetDebugger(p.pid, AttachService.GetDefaultConfig(), path);
+        DotNetWatch.DebugService.AttachDotNetDebugger(p.pid, AttachService.GetDefaultConfig(), path);
       }
     });
     if (matchedProcesses.length > 0) {
       //try detect if it's due to restart
-      DotNetAutoAttach.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
+      DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * @file Contains the DotNetAutoAttachTask class.
+ * @file Contains the DotNetWatchTask class.
  * @Author: Dennis Jung
  * @Author: Konrad Müller
  * @Date: 2018-06-15 14:34:31
@@ -10,19 +10,19 @@
 import { ProcessExecution, Task, TaskExecution, WorkspaceFolder } from "vscode";
 
 /**
- * The DotNetAutoAttachTask, represents a running AutoAttachTask
+ * The DotNetWatchTask, represents a running AutoAttachTask
  *
  * @export
- * @class DotNetAutoAttachTask
+ * @class DotNetWatchTask
  */
-export default class DotNetAutoAttachTask {
+export default class DotNetWatchTask {
   /**
-   * Creates an instance of DotNetAutoAttachTask.
+   * Creates an instance of DotNetWatchTask.
    * @param {TaskExecution} taskExec
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public constructor(taskExec: TaskExecution) {
-    this._id = DotNetAutoAttachTask.GetIdFromTask(taskExec.task);
+    this._id = DotNetWatchTask.GetIdFromTask(taskExec.task);
     this._workSpace = taskExec.task.scope as WorkspaceFolder;
     this._taskExec = taskExec;
     this._processId = undefined;
@@ -41,7 +41,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _id: string;
 
@@ -50,7 +50,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {WorkspaceFolder}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _workSpace: WorkspaceFolder;
 
@@ -59,7 +59,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {(number | undefined)}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _processId: number | undefined;
 
@@ -68,7 +68,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _projectPath = "";
 
@@ -77,7 +77,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _projectFolderPath = "";
 
@@ -86,7 +86,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _project = "";
 
@@ -95,7 +95,7 @@ export default class DotNetAutoAttachTask {
    *
    * @private
    * @type {TaskExecution}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   private _taskExec: TaskExecution;
 
@@ -104,7 +104,7 @@ export default class DotNetAutoAttachTask {
    *
    * @readonly
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get Id(): string {
     return this._id;
@@ -114,7 +114,7 @@ export default class DotNetAutoAttachTask {
    *
    * @readonly
    * @type {WorkspaceFolder}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get Workspace(): WorkspaceFolder {
     return this._workSpace;
@@ -125,7 +125,7 @@ export default class DotNetAutoAttachTask {
    *
    * @readonly
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get ProjectPath(): string {
     return this._projectPath;
@@ -136,7 +136,7 @@ export default class DotNetAutoAttachTask {
    *
    * @readonly
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get ProjectFolderPath(): string {
     return this._projectFolderPath;
@@ -147,7 +147,7 @@ export default class DotNetAutoAttachTask {
    *
    * @readonly
    * @type {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get Project(): string {
     return this._project;
@@ -157,7 +157,7 @@ export default class DotNetAutoAttachTask {
    * Gets the ProcessId.
    *
    * @type {(number | undefined)}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public get ProcessId(): number | undefined {
     return this._processId;
@@ -165,7 +165,7 @@ export default class DotNetAutoAttachTask {
   /**
    * Sets the ProcessId.
    *
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public set ProcessId(num: number | undefined) {
     this._processId = num;
@@ -176,7 +176,7 @@ export default class DotNetAutoAttachTask {
    * @static
    * @param {Task} task
    * @returns {string}
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public static GetIdFromTask(task: Task): string {
     if (task.scope) {
@@ -190,7 +190,7 @@ export default class DotNetAutoAttachTask {
   /**
    * Terminates the execution.
    *
-   * @memberof DotNetAutoAttachTask
+   * @memberof DotNetWatchTask
    */
   public Terminate(): void {
     this._taskExec.terminate();

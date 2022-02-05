@@ -1,5 +1,5 @@
 /*
- * @file Contains the DotNetAutoAttachDebugConfiguration.
+ * @file Contains the DotNetWatchDebugConfiguration.
  * @Author: Dennis Jung
  * @Author: Konrad Müller
  * @Date: 2018-06-15 14:36:43
@@ -10,18 +10,18 @@
 import { DebugConfiguration, WorkspaceFolder } from "vscode";
 
 /**
- * The DotNetAutoAttachDebugConfiguration class, extends the vscode.DebugConfiguration
+ * The DotNetWatchDebugConfiguration class, extends the vscode.DebugConfiguration
  *
  * @export
- * @interface DotNetAutoAttachDebugConfiguration
+ * @interface DotNetWatchDebugConfiguration
  * @extends {DebugConfiguration}
  */
-export default interface IDotNetAutoAttachDebugConfiguration extends DebugConfiguration {
+export default interface IDotNetWatchDebugConfiguration extends DebugConfiguration {
   /**
    * The workspace of the debug session.
    *
    * @type {WorkspaceFolder}
-   * @memberof IDotNetAutoAttachDebugConfiguration
+   * @memberof IDotNetWatchDebugConfiguration
    */
   workspace: WorkspaceFolder;
 
@@ -29,7 +29,7 @@ export default interface IDotNetAutoAttachDebugConfiguration extends DebugConfig
    * The arguments for the application of the debug session.
    *
    * @type {Array<string>}
-   * @memberof IDotNetAutoAttachDebugConfiguration
+   * @memberof IDotNetWatchDebugConfiguration
    */
   args: Array<string>;
 
@@ -37,7 +37,7 @@ export default interface IDotNetAutoAttachDebugConfiguration extends DebugConfig
    * The environment variables of the debug session.
    *
    * @type {{ [key: string]: string }}
-   * @memberof IDotNetAutoAttachDebugConfiguration
+   * @memberof IDotNetWatchDebugConfiguration
    */
   env?: { [key: string]: string };
 
@@ -45,7 +45,7 @@ export default interface IDotNetAutoAttachDebugConfiguration extends DebugConfig
    * The project name of the application of the debug session.
    *
    * @type {string}
-   * @memberof IDotNetAutoAttachDebugConfiguration
+   * @memberof IDotNetWatchDebugConfiguration
    */
   project: string;
 }

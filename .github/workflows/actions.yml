@@ -54,7 +54,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
-          body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-auto-attach-develop/blob/main/CHANGELOG.md) for details.
+          body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-watch/blob/main/CHANGELOG.md) for details.
           draft: false
           prerelease: false
       - uses: actions/upload-release-asset@v1

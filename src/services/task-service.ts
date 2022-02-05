@@ -21,10 +21,9 @@ import {
   workspace,
 } from "vscode";
 import * as vscodeVariables from "vscode-variables";
-import DotNetAutoAttach from "../dotNetAutoAttach";
-import DotNetAutoAttachDebugConfiguration from "../interfaces/IDotNetAutoAttachDebugConfiguration";
-import DotNetAutoAttachTask from "../models/DotNetAutoAttachTask";
-import LaunchProfileQuickPickItem from "../models/LaunchProfileQuickPickItem";
+import DotNetWatch from "../dotNetWatch";
+import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
+import DotNetWatchTask from "../models/DotNetWatchTask";
 import { ILaunchSettings } from "../models/LaunchSettings";
 
 /**
@@ -62,9 +61,9 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private static TryToRemoveEndedTask(event: TaskEndEvent) {
-    const taskId = DotNetAutoAttachTask.GetIdFromTask(event.execution.task);
+    const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
     if (taskId && taskId !== "") {
-      DotNetAutoAttach.Cache.RunningAutoAttachTasks.remove(taskId);
+      DotNetWatch.Cache.RunningAutoAttachTasks.remove(taskId);
     }
   }
 
@@ -77,11 +76,11 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private static IsWatcherStartedSetProcessId(event: TaskProcessStartEvent) {
-    const taskId = DotNetAutoAttachTask.GetIdFromTask(event.execution.task);
-    if (DotNetAutoAttach.Cache.RunningAutoAttachTasks.containsKey(taskId)) {
-      const task = DotNetAutoAttach.Cache.RunningAutoAttachTasks.getValue(taskId) as DotNetAutoAttachTask;
+    const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
+    if (DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(taskId)) {
+      const task = DotNetWatch.Cache.RunningAutoAttachTasks.getValue(taskId) as DotNetWatchTask;
       task.ProcessId = event.processId;
-      DotNetAutoAttach.Cache.RunningAutoAttachTasks.setValue(taskId, task);
+      DotNetWatch.Cache.RunningAutoAttachTasks.setValue(taskId, task);
     }
   }
 
@@ -94,14 +93,14 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private static StartTask(task: Task): void {
-    if (!DotNetAutoAttach.Cache.RunningAutoAttachTasks.containsKey(DotNetAutoAttachTask.GetIdFromTask(task))) {
+    if (!DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(DotNetWatchTask.GetIdFromTask(task))) {
       const tmp = tasks.executeTask(task);
       tmp.then((k: TaskExecution) => {
-        const autoTask: DotNetAutoAttachTask = new DotNetAutoAttachTask(k);
-        DotNetAutoAttach.Cache.RunningAutoAttachTasks.setValue(autoTask.Id, autoTask);
+        const autoTask: DotNetWatchTask = new DotNetWatchTask(k);
+        DotNetWatch.Cache.RunningAutoAttachTasks.setValue(autoTask.Id, autoTask);
       });
     } else {
-      DotNetAutoAttach.UiService.TaskAlreadyStartedInformationMessage(task.definition.type.replace("Watch ", ""));
+      DotNetWatch.UiService.TaskAlreadyStartedInformationMessage(task.definition.type.replace("Watch ", ""));
     }
   }
 
@@ -110,51 +109,38 @@ export default class TaskService implements Disposable {
    *
    * @private
    * @static
-   * @param {DotNetAutoAttachDebugConfiguration} config
+   * @param {DotNetWatchDebugConfiguration} config
    * @param {string} [project=""]
    * @returns {Task}
    * @memberof TaskService
    */
-  private static async GenerateTask(config: DotNetAutoAttachDebugConfiguration, projectUri: Uri): Promise<Task> {
+  private static async GenerateTask(config: DotNetWatchDebugConfiguration, projectUri: Uri): Promise<Task> {
     let projectName = "";
     let launchSettingsPath = "";
     let launchProfiles = [];
-    let selectedLaunchProfile: LaunchProfileQuickPickItem | undefined;
+    let selectedLaunchProfile = "";
     const name_regex = /(^.+)(\/|\\)(.+).csproj/;
     const matches = name_regex.exec(projectUri.fsPath);
     if (matches && matches.length === 4) {
       projectName = matches[3];
-      //default launch settings path
-      //todo: handle missing launch profile
       launchSettingsPath = `${matches[1]}/Properties/launchSettings.json`;
     }
-
     try {
-      //todo: must we do this? need to find a better way
-      //while (selectedLaunchProfile === undefined) {
       await workspace.openTextDocument(launchSettingsPath).then(async (launchSettingsDocument) => {
         const launchSettings: ILaunchSettings = JSON.parse(launchSettingsDocument.getText());
         launchProfiles = launchSettings.profiles ? Object.keys(launchSettings.profiles) : [];
+        //todo: improve this, or research how visual studio does it
         if (launchProfiles.length > 1) {
-          await DotNetAutoAttach.UiService.OpenLaunchProfileQuickPick(projectName, launchProfiles.concat()).then(
-            (selectedProfile) => {
-              if (selectedProfile) selectedLaunchProfile = selectedProfile;
-            }
-          );
+          selectedLaunchProfile = launchProfiles[0];
         } else if (launchProfiles.length === 1) {
-          //todo: figure out what's wrong here
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          //@ts-ignore
           selectedLaunchProfile = launchProfiles[0];
         }
       });
-      //}
       if (selectedLaunchProfile) {
-        config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile?.label}`);
+        config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      DotNetAutoAttach.UiService.GenericErrorMessage(`Error opening launch profile: ${error.message}`);
+    } catch (error) {
+      DotNetWatch.UiService.GenericErrorMessage(`Error opening launch profile: ${(error as Error).message}`);
     }
 
     const task: Task = new Task(
@@ -225,14 +211,14 @@ export default class TaskService implements Disposable {
    * Start DotNetWatchTask when no project is configured.
    *
    * @private
-   * @param {DotNetAutoAttachDebugConfiguration} config
+   * @param {DotNetWatchDebugConfiguration} config
    * @memberof TaskService
    */
-  private StartDotNetWatchTaskNoProjectConfig(config: DotNetAutoAttachDebugConfiguration): void {
+  private StartDotNetWatchTaskNoProjectConfig(config: DotNetWatchDebugConfiguration): void {
     workspace.findFiles("**/*.csproj").then(async (k) => {
       const tmp = k.filter((m) => m.toString().startsWith(config.workspace.uri.toString()));
       if (tmp.length > 1) {
-        DotNetAutoAttach.UiService.OpenProjectQuickPick(tmp).then(async (s) => {
+        DotNetWatch.UiService.OpenProjectQuickPick(tmp).then(async (s) => {
           if (s) {
             const task = await TaskService.GenerateTask(config, s.uri);
             TaskService.StartTask(task);
@@ -249,10 +235,10 @@ export default class TaskService implements Disposable {
    * Start DotNetWatchTask when projcet is configured.
    *
    * @private
-   * @param {DotNetAutoAttachDebugConfiguration} config
+   * @param {DotNetWatchDebugConfiguration} config
    * @memberof TaskService
    */
-  private StartDotNetWatchTaskWithProjectConfig(config: DotNetAutoAttachDebugConfiguration): void {
+  private StartDotNetWatchTaskWithProjectConfig(config: DotNetWatchDebugConfiguration): void {
     this.CheckProjectConfig(config.project).then(async (projectUri) => {
       if (projectUri) {
         const task = await TaskService.GenerateTask(config, projectUri);
@@ -260,7 +246,7 @@ export default class TaskService implements Disposable {
       }
       // if no project not found or it isn't unique show error message.
       else {
-        DotNetAutoAttach.UiService.ProjectDoesNotExistErrorMessage(config).then((open) => {
+        DotNetWatch.UiService.ProjectDoesNotExistErrorMessage(config).then((open) => {
           if (open) {
             workspace.findFiles("**/launch.json").then((files) => {
               if (files && files.length > 0) {
@@ -276,10 +262,10 @@ export default class TaskService implements Disposable {
   /**
    * Start a new DotNet Watch Task
    *
-   * @param {DotNetAutoAttachDebugConfiguration} config
+   * @param {DotNetWatchDebugConfiguration} config
    * @memberof TaskService
    */
-  public StartDotNetWatchTask(config: DotNetAutoAttachDebugConfiguration) {
+  public StartDotNetWatchTask(config: DotNetWatchDebugConfiguration) {
     // Check if there is a no project configured
     if (!config.project || 0 === config.project.length) {
       this.StartDotNetWatchTaskNoProjectConfig(config);

@@ -9,7 +9,7 @@
 
 import { Dictionary } from "typescript-collections";
 import { DebugSession, Disposable } from "vscode";
-import DotNetAutoAttachTask from "../models/DotNetAutoAttachTask";
+import DotNetWatchTask from "../models/DotNetWatchTask";
 
 /**
  * The CacheService. Provides access to the central cache.
@@ -18,56 +18,53 @@ import DotNetAutoAttachTask from "../models/DotNetAutoAttachTask";
  * @class CacheService
  */
 export default class CacheService implements Disposable {
-	/**
-	 * Creates an instance of CacheService.
-	 * @memberof CacheService
-	 */
-	public constructor() {
-		this.RunningAutoAttachTasks = new Dictionary<
-			string,
-			DotNetAutoAttachTask
-		>();
-		this.RunningDebugs = new Dictionary<number, DebugSession>();
-		this.DisconnectedDebugs = new Set<number>();
-	}
+  /**
+   * Creates an instance of CacheService.
+   * @memberof CacheService
+   */
+  public constructor() {
+    this.RunningAutoAttachTasks = new Dictionary<string, DotNetWatchTask>();
+    this.RunningDebugs = new Dictionary<number, DebugSession>();
+    this.DisconnectedDebugs = new Set<number>();
+  }
 
-	/**
-	 * A list of all running DotNetAutoAttachTasks.
-	 *
-	 * @type {Dictionary<string, DotNetAutoAttachTask>}
-	 * @memberof CacheService
-	 */
-	public RunningAutoAttachTasks: Dictionary<string, DotNetAutoAttachTask>;
+  /**
+   * A list of all running DotNetWatchTasks.
+   *
+   * @type {Dictionary<string, DotNetWatchTask>}
+   * @memberof CacheService
+   */
+  public RunningAutoAttachTasks: Dictionary<string, DotNetWatchTask>;
 
-	/**
-	 * A list of all active debugging sessions.
-	 *
-	 * @private
-	 * @static
-	 * @type {Dictionary<number, DebugSession>}
-	 * @memberof CacheService
-	 */
-	public RunningDebugs: Dictionary<number, DebugSession>;
+  /**
+   * A list of all active debugging sessions.
+   *
+   * @private
+   * @static
+   * @type {Dictionary<number, DebugSession>}
+   * @memberof CacheService
+   */
+  public RunningDebugs: Dictionary<number, DebugSession>;
 
-	/**
-	 * A list of all debugging sessions which are diconnected.
-	 *
-	 * @type {Set<number>}
-	 * @memberof CacheService
-	 */
-	public DisconnectedDebugs: Set<number>;
+  /**
+   * A list of all debugging sessions which are diconnected.
+   *
+   * @type {Set<number>}
+   * @memberof CacheService
+   */
+  public DisconnectedDebugs: Set<number>;
 
-	/**
-	 * Dispose the object.
-	 *
-	 * @memberof CacheService
-	 */
-	public dispose() {
-		this.RunningAutoAttachTasks.forEach((k, v) => {
-			v.Terminate();
-		});
-		this.RunningAutoAttachTasks.clear();
-		this.RunningDebugs.clear();
-		this.DisconnectedDebugs.clear();
-	}
+  /**
+   * Dispose the object.
+   *
+   * @memberof CacheService
+   */
+  public dispose() {
+    this.RunningAutoAttachTasks.forEach((k, v) => {
+      v.Terminate();
+    });
+    this.RunningAutoAttachTasks.clear();
+    this.RunningDebugs.clear();
+    this.DisconnectedDebugs.clear();
+  }
 }
