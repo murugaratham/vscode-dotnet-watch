@@ -30,7 +30,7 @@ export default class AttachService implements Disposable {
   }
 
   /**
-   * The intervall between the poll.
+   * The interval between the poll.
    *
    * @private
    * @static
