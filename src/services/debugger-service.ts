@@ -1,12 +1,3 @@
-/*
- * @file Contains the DebuggerService.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2018-06-13 20:33:10
- * @Last Modified by: Dennis Jung
- * @Last Modified time: 2019-02-23 16:09:44
- */
-
 "use strict";
 import * as vscode from "vscode";
 import { debug, Disposable } from "vscode";
@@ -65,10 +56,8 @@ export default class DebuggerService implements Disposable {
   private static TryToRemoveDisconnectedDebugSession(session: vscode.DebugSession): void {
     DotNetWatch.Cache.RunningDebugs.forEach((k, v) => {
       if (v.name === session.name) {
-        setTimeout(() => {
-          DotNetWatch.Cache.RunningDebugs.remove(k);
-          DotNetWatch.Cache.DisconnectedDebugs.add(k);
-        }, 2000);
+        DotNetWatch.Cache.RunningDebugs.remove(k);
+        DotNetWatch.Cache.DisconnectedDebugs.add(k);
       }
     });
   }
@@ -84,7 +73,6 @@ export default class DebuggerService implements Disposable {
     // Disconnect old debug
     const debugSession = DotNetWatch.Cache.RunningDebugs.getValue(debugSessionId);
     if (debugSession) {
-      console.log(debugSession);
       DotNetWatch.Cache.RunningDebugs.remove(debugSessionId);
       debugSession.customRequest("disconnect");
     }
@@ -117,20 +105,14 @@ export default class DebuggerService implements Disposable {
     const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) => path.startsWith(t.ProjectFolderPath));
     if (!DotNetWatch.Cache.RunningDebugs.containsKey(pid) && !DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
       baseConfig.processId = String(pid);
-      baseConfig.name = task.Project + " - " + baseConfig.name + " - " + baseConfig.processId;
-      DotNetWatch.Cache.RunningDebugs.setValue(pid, {
-        name: baseConfig.name,
-      } as vscode.DebugSession);
+      baseConfig.name = `${task.Project} - ${baseConfig.name} - ${baseConfig.processId}`;
+      DotNetWatch.Cache.RunningDebugs.setValue(pid, { name: baseConfig.name } as vscode.DebugSession);
       vscode.debug.startDebugging(undefined, baseConfig);
     } else if (DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
-      DotNetWatch.Cache.RunningDebugs.setValue(pid, {
-        name: "",
-      } as vscode.DebugSession);
+      DotNetWatch.Cache.RunningDebugs.setValue(pid, { name: "" } as vscode.DebugSession);
       DotNetWatch.Cache.DisconnectedDebugs.delete(pid);
       task.Terminate();
-      setTimeout(() => {
-        DotNetWatch.Cache.RunningDebugs.remove(pid);
-      }, 50);
+      DotNetWatch.Cache.RunningDebugs.remove(pid);
     }
   }
 
@@ -140,9 +122,7 @@ export default class DebuggerService implements Disposable {
    * @memberof DebuggerService
    */
   public dispose(): void {
-    this.disposables.forEach((k) => {
-      k.dispose();
-    });
+    this.disposables.forEach((k) => k.dispose());
     this.disposables.clear();
   }
 }

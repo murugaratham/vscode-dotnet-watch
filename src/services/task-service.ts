@@ -1,12 +1,3 @@
-/*
- * @file Contains the TaskService.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2018-06-15 14:31:53
- * @Last Modified by: Dennis Jung
- * @Last Modified time: 2019-02-23 15:41:13
- */
-
 import {
   Disposable,
   ProcessExecution,
@@ -15,7 +6,9 @@ import {
   TaskEndEvent,
   TaskExecution,
   TaskProcessStartEvent,
+  TaskRevealKind,
   tasks,
+  TextDocument,
   Uri,
   window,
   workspace,
@@ -115,38 +108,19 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private static async GenerateTask(config: DotNetWatchDebugConfiguration, projectUri: Uri): Promise<Task> {
-    let projectName = "";
-    let launchSettingsPath = "";
-    let launchProfiles = [];
-    let selectedLaunchProfile = "";
     const name_regex = /(^.+)(\/|\\)(.+).csproj/;
     const matches = name_regex.exec(projectUri.fsPath);
+    let projectName = "",
+      launchSettingsPath = "";
     if (matches && matches.length === 4) {
       projectName = matches[3];
       launchSettingsPath = `${matches[1]}/Properties/launchSettings.json`;
     }
-    try {
-      await workspace.openTextDocument(launchSettingsPath).then(async (launchSettingsDocument) => {
-        const launchSettings: ILaunchSettings = JSON.parse(launchSettingsDocument.getText());
-        launchProfiles = launchSettings.profiles ? Object.keys(launchSettings.profiles) : [];
-        //todo: improve this, or research how visual studio does it
-        if (launchProfiles.length > 1) {
-          selectedLaunchProfile = launchProfiles[0];
-        } else if (launchProfiles.length === 1) {
-          selectedLaunchProfile = launchProfiles[0];
-        }
-      });
-      if (selectedLaunchProfile) {
-        config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
-      }
-    } catch (error) {
-      DotNetWatch.UiService.GenericErrorMessage(`Error opening launch profile: ${(error as Error).message}`);
-    }
-
+    await TaskService.LoadLaunchProfile(launchSettingsPath, config);
     const task: Task = new Task(
-      { type: "Watch " + projectName } as TaskDefinition,
+      { type: `Watch ${projectName}` } as TaskDefinition,
       config.workspace,
-      "Watch" + " " + projectName,
+      `Watch ${projectName}`,
       "DotNet Auto Attach",
       new ProcessExecution("dotnet", ["watch", "--project", projectUri.fsPath, "run", ...config.args], {
         cwd: config.workspace.uri.fsPath,
@@ -154,8 +128,35 @@ export default class TaskService implements Disposable {
       }),
       "$mscompile"
     );
-
+    //setting these gives a better experience when debugging
+    task.presentationOptions.reveal = TaskRevealKind.Silent;
+    task.presentationOptions.showReuseMessage = false;
     return task;
+  }
+
+  private static async LoadLaunchProfile(launchSettingsPath: string, config: DotNetWatchDebugConfiguration) {
+    try {
+      const fulfilled = async (launchSettingsDocument: TextDocument) => {
+        const launchSettings: ILaunchSettings = JSON.parse(launchSettingsDocument.getText());
+        //naively attempt to load first launch profile, until we know how to handle compound launch configurations
+        return launchSettings.profiles && Object.keys(launchSettings.profiles)[0];
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- if not, what?
+      const rejected: ((reason: any) => void | Thenable<void>) | undefined = (reason) => {
+        DotNetWatch.UiService.GenericErrorMessage(`Error opening launch profile [${launchSettingsPath}]: ${reason}`);
+      };
+
+      const selectedLaunchProfile = await workspace.openTextDocument(launchSettingsPath).then(fulfilled, rejected);
+
+      if (selectedLaunchProfile) {
+        config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
+      }
+    } catch (error) {
+      DotNetWatch.UiService.GenericErrorMessage(
+        `Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`
+      );
+    }
   }
 
   /**
@@ -232,7 +233,7 @@ export default class TaskService implements Disposable {
   }
 
   /**
-   * Start DotNetWatchTask when projcet is configured.
+   * Start DotNetWatchTask when project is configured.
    *
    * @private
    * @param {DotNetWatchDebugConfiguration} config
