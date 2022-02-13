@@ -12,6 +12,7 @@ import { DebugConfiguration, Disposable } from "vscode";
 import * as vscode from "vscode";
 import DotNetWatch from "../dotNetWatch";
 import ProcessDetail from "../models/ProcessDetail";
+import * as fsPath from "path";
 
 /**
  * The AttachService
@@ -38,6 +39,17 @@ export default class AttachService implements Disposable {
    * @memberof AttachService
    */
   private static interval = 1000;
+
+  /**
+   * A discriminator used to determine which process to debug.
+   * 
+   * @private
+   * @static
+   * @readonly
+   * @type {string}
+   * @memberof AttachService
+   */
+  private static readonly processPathDiscriminator = ['', 'bin', 'Debug'].join(fsPath.sep);
 
   /**
    * A list of all disposables.
@@ -110,7 +122,7 @@ export default class AttachService implements Disposable {
     const matchedProcesses = new Array<number>();
 
     processesToScan.forEach((p) => {
-      if (p.cml.search("/bin/Debug") !== -1 && DotNetWatch.AttachService.CheckForWorkspace(p)) {
+      if (p.cml.includes(AttachService.processPathDiscriminator) && DotNetWatch.AttachService.CheckForWorkspace(p)) {
         const pathRgx = /(.*)(run|--launch-profile.+|)/g;
         const matches = pathRgx.exec(p.cml);
         let path = "";
