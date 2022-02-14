@@ -1,9 +1,12 @@
 # Changelog
 
-All notable changes to the "vscode-dotnet-auto-attach" extension will be documented in this file.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+### Fixed
+
+- Windows dotnet watch not working - [issue](https://github.com/murugaratham/vscode-dotnet-watch/issues/1)
+
+### [1.0.3](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.1...v1.0.3) (2022-02-14)
 
 ## [1.1.1] - 2020-03-08
 
