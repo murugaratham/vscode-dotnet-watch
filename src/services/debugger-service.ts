@@ -102,7 +102,8 @@ export default class DebuggerService implements Disposable {
    * @memberof DebuggerService
    */
   public AttachDotNetDebugger(pid: number, baseConfig: vscode.DebugConfiguration, path: string): void {
-    const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) => path.startsWith(t.ProjectFolderPath));
+    const unquotedPath = path.replace(/^"/, "");
+    const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) => unquotedPath.startsWith(t.ProjectFolderPath));
     if (!DotNetWatch.Cache.RunningDebugs.containsKey(pid) && !DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
       baseConfig.processId = String(pid);
       baseConfig.name = `${task.Project} - ${baseConfig.name} - ${baseConfig.processId}`;
