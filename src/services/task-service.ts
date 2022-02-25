@@ -116,7 +116,7 @@ export default class TaskService implements Disposable {
       projectName = matches[3];
       launchSettingsPath = `${matches[1]}/Properties/launchSettings.json`;
     }
-    await TaskService.LoadLaunchProfile(launchSettingsPath, config);
+    await TaskService.TryLoadLaunchProfile(launchSettingsPath, config);
     const task: Task = new Task(
       { type: `Watch ${projectName}` } as TaskDefinition,
       config.workspace,
@@ -134,7 +134,7 @@ export default class TaskService implements Disposable {
     return task;
   }
 
-  private static async LoadLaunchProfile(launchSettingsPath: string, config: DotNetWatchDebugConfiguration) {
+  private static async TryLoadLaunchProfile(launchSettingsPath: string, config: DotNetWatchDebugConfiguration) {
     try {
       const fulfilled = async (launchSettingsDocument: TextDocument) => {
         const launchSettings: ILaunchSettings = JSON.parse(launchSettingsDocument.getText());
@@ -142,20 +142,16 @@ export default class TaskService implements Disposable {
         return launchSettings.profiles && Object.keys(launchSettings.profiles)[0];
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- if not, what?
-      const rejected: ((reason: any) => void | Thenable<void>) | undefined = (reason) => {
-        DotNetWatch.UiService.GenericErrorMessage(`Error opening launch profile [${launchSettingsPath}]: ${reason}`);
-      };
-
-      const selectedLaunchProfile = await workspace.openTextDocument(launchSettingsPath).then(fulfilled, rejected);
+      const selectedLaunchProfile = await workspace.openTextDocument(launchSettingsPath).then(fulfilled);
 
       if (selectedLaunchProfile) {
         config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
       }
     } catch (error) {
-      DotNetWatch.UiService.GenericErrorMessage(
-        `Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`
-      );
+      if (!(<Error>error).message.startsWith("cannot open file"))
+        DotNetWatch.UiService.GenericErrorMessage(
+          `Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`
+        );
     }
   }
 

@@ -6,16 +6,14 @@ If you are releasing to marketplace, please make sure you follow the process doc
 
 ## Add all git changes
 
-```
-npm run release
-```
-
 Review Changelog.md, feel free to update changelog.md to something that makes sense.
 
 When you are ready:
 
 ```sh
 git add .
+
+npm run release
 
 npm run commit
 ```

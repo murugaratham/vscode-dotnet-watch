@@ -2,9 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### Fixed
-
-- Windows dotnet watch not working - [issue](https://github.com/murugaratham/vscode-dotnet-watch/issues/1)
+### [1.0.4](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.2...v1.0.4) (2022-02-25)
 
 ### [1.0.3](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.1...v1.0.3) (2022-02-14)
 
