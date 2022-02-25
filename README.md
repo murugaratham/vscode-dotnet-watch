@@ -50,10 +50,25 @@ Multiple projects can be debugged in a single launch by using compound tasks.
 		"type": "DotNetWatch",
 		"request": "launch",
 		"name": ".NET Core Watch: dotnet-test2.console",
-		"project": "dotnet-test2.console.csproj",
 		"env": {
-			"ASPNETCORE_ENVIRONMENT": "Development"
-		}
+			"ASPNETCORE_ENVIRONMENT": "Development",
+			"DOTNET_WATCH_RESTART_ON_RUDE_EDIT": "true"
+		},
+		"launchBrowser": {
+			"enabled": true,
+			"args": "${auto-detect-url}",
+			"windows": {
+				"command": "cmd.exe",
+				"args": "/C start ${auto-detect-url}"
+			},
+			"osx": {
+				"command": "open"
+			},
+			"linux": {
+				"command": "xdg-open"
+			}
+		},
+		"project": "Patient.Api.csproj"
 	}
 ]
 ...
