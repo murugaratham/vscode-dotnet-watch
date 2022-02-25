@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.4...v1.1.0) (2022-02-25)
+
+
+### Features
+
+* **task-service.ts:** tryLoadLaunchProfile instead of prompting error (can't find launchSettings) ([9204e4c](https://github.com/murugaratham/vscode-dotnet-watch/commit/9204e4c9a085dbbabb67869a4472e72f66901aa3))
+
 ### [1.0.4](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.2...v1.0.4) (2022-02-25)
 
 ### [1.0.3](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.1...v1.0.3) (2022-02-14)
