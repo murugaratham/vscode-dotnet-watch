@@ -67,8 +67,7 @@ Multiple projects can be debugged in a single launch by using compound tasks.
 			"linux": {
 				"command": "xdg-open"
 			}
-		},
-		"project": "Patient.Api.csproj"
+		}
 	}
 ]
 ...
