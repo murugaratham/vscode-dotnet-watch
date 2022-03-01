@@ -13,7 +13,6 @@ import {
   window,
   workspace,
 } from "vscode";
-import * as vscodeVariables from "vscode-variables";
 import DotNetWatch from "../dotNetWatch";
 import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
 import DotNetWatchTask from "../models/DotNetWatchTask";
@@ -181,7 +180,7 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private CheckProjectConfig(project: string): Thenable<Uri | undefined> {
-    const decodedProject = vscodeVariables(project);
+    const decodedProject = project;
     const isCsproj = project.endsWith(".csproj");
 
     // if it is not a specific file, probably only a folder name.
