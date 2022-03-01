@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.1](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.0...v1.1.1) (2022-03-01)
+
+
+### Bug Fixes
+
+* **task-service:** if there's no active files, vscode-variables throws ([f2d5055](https://github.com/murugaratham/vscode-dotnet-watch/commit/f2d50552b28a19b799bd03ac8240c58929eac911))
+
 ## [1.1.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.0.4...v1.1.0) (2022-02-25)
 
 
