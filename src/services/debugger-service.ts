@@ -1,6 +1,6 @@
 "use strict";
 import * as vscode from "vscode";
-import { debug, Disposable } from "vscode";
+import { debug, DebugSession, Disposable } from "vscode";
 import DotNetWatch from "../dotNetWatch";
 
 /**
@@ -18,6 +18,24 @@ export default class DebuggerService implements Disposable {
     this.disposables = new Set<Disposable>();
     this.disposables.add(debug.onDidTerminateDebugSession(DebuggerService.TryToRemoveDisconnectedDebugSession));
     this.disposables.add(debug.onDidStartDebugSession(DebuggerService.AddDebugSession));
+    //if restart debug session, do these
+    vscode.debug.registerDebugAdapterTrackerFactory("*", {
+      createDebugAdapterTracker(session: DebugSession) {
+        return {
+          onWillReceiveMessage: (m) => {
+            if (m.command && m.command == "disconnect" && m.arguments) {
+              if (m.arguments.restart && m.arguments.restart === true) {
+                //console.log("restart");
+                DebuggerService.TryToRemoveDisconnectedDebugSession(session);
+              }
+            }
+          },
+          // onWillStopSession: () => {
+          //   DebuggerService.TryToRemoveDisconnectedDebugSession(session);
+          // },
+        };
+      },
+    });
   }
 
   /**
@@ -58,6 +76,11 @@ export default class DebuggerService implements Disposable {
       if (v.name === session.name) {
         DotNetWatch.Cache.RunningDebugs.remove(k);
         DotNetWatch.Cache.DisconnectedDebugs.add(k);
+        const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) =>
+          session.name.toLocaleLowerCase().startsWith(t.Project.toLocaleLowerCase())
+        );
+        DotNetWatch.Cache.RunningAutoAttachTasks.remove(v.id);
+        task?.Terminate();
       }
     });
   }
@@ -103,17 +126,18 @@ export default class DebuggerService implements Disposable {
    */
   public AttachDotNetDebugger(pid: number, baseConfig: vscode.DebugConfiguration, path: string): void {
     const unquotedPath = path.replace(/^"/, "");
-    const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) => unquotedPath.startsWith(t.ProjectFolderPath));
+    const task = DotNetWatch.Cache.RunningAutoAttachTasks.values().find((t) =>
+      unquotedPath.startsWith(t.ProjectFolderPath)
+    );
     if (!DotNetWatch.Cache.RunningDebugs.containsKey(pid) && !DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
-      baseConfig.processId = String(pid);
-      baseConfig.name = `${task.Project} - ${baseConfig.name} - ${baseConfig.processId}`;
+      baseConfig.processId = pid.toString(10);
+      baseConfig.name = `${task.Project} - ${baseConfig.name}`;
       DotNetWatch.Cache.RunningDebugs.setValue(pid, { name: baseConfig.name } as vscode.DebugSession);
       vscode.debug.startDebugging(undefined, baseConfig);
     } else if (DotNetWatch.Cache.DisconnectedDebugs.has(pid) && task) {
-      DotNetWatch.Cache.RunningDebugs.setValue(pid, { name: "" } as vscode.DebugSession);
+      DotNetWatch.Cache.RunningDebugs.remove(pid);
       DotNetWatch.Cache.DisconnectedDebugs.delete(pid);
       task.Terminate();
-      DotNetWatch.Cache.RunningDebugs.remove(pid);
     }
   }
 

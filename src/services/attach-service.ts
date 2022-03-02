@@ -42,14 +42,14 @@ export default class AttachService implements Disposable {
 
   /**
    * A discriminator used to determine which process to debug.
-   * 
+   *
    * @private
    * @static
    * @readonly
    * @type {string}
    * @memberof AttachService
    */
-  private static readonly processPathDiscriminator = ['', 'bin', 'Debug'].join(fsPath.sep);
+  private static readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
 
   /**
    * A list of all disposables.
@@ -81,7 +81,7 @@ export default class AttachService implements Disposable {
     return {
       type: "coreclr",
       request: "attach",
-      name: ".NET Core Attach - AUTO",
+      name: ".NET Watch",
     };
   }
 
