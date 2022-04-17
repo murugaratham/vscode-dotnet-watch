@@ -52,7 +52,7 @@ export default class ProcessService implements Disposable {
     const cmlPattern = /^([0-9]+)\s+([0-9]+)\s(.+$)/;
 
     // build and execute command line tool "ps" to get details of all running processes
-    const args = ["-o pid, ppid, command"];
+    const args = ["-o pid,ppid,command"];
     const tmp = child_process.execFileSync("ps", args, {
       encoding: "utf8",
     });
