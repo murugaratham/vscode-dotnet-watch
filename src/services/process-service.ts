@@ -53,9 +53,7 @@ export default class ProcessService implements Disposable {
 
     // build and execute command line tool "ps" to get details of all running processes
     const args = ["-o pid,ppid,command"];
-    const tmp = child_process.execFileSync("ps", args, {
-      encoding: "utf8",
-    });
+		const tmp = child_process.execSync(`ps ${args}`).toString();
 
     // split process informations results for each process
     const processLines = tmp

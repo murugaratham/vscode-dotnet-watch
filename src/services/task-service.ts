@@ -125,7 +125,7 @@ export default class TaskService implements Disposable {
         cwd: config.workspace.uri.fsPath,
         env: config.env,
       }),
-      "$mscompile"
+      "$msCompile"
     );
     //setting these gives a better experience when debugging
     task.presentationOptions.reveal = TaskRevealKind.Silent;
@@ -239,6 +239,7 @@ export default class TaskService implements Disposable {
       if (projectUri) {
         const task = await TaskService.GenerateTask(config, projectUri);
         TaskService.StartTask(task);
+				console.log("started task")
       }
       // if no project not found or it isn't unique show error message.
       else {

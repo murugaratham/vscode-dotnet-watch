@@ -2,7 +2,7 @@
   "name": "vscode-dotnet-watch",
   "displayName": ".NET Watch",
   "description": "Dotnet watch with automatic debugger attach",
-  "version": "1.1.1",
+  "version": "1.1.3",
   "publisher": "Murugaratham",
   "engines": {
     "vscode": "^1.42.1"
