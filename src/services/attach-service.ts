@@ -136,7 +136,10 @@ export default class AttachService implements Disposable {
     });
     if (matchedProcesses.length > 0) {
       //try detect if it's due to restart
-      DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
+
+			// Debugger gets attached and disconnected immediately, so this is why I commented this line.
+			// FIXME!
+      // DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
     }
   }
 
