@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.5](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.4...v1.1.5) (2022-08-07)
+
+
+### Bug Fixes
+
+* **npm:** update @types/vscode & typescript ([b29e0cf](https://github.com/murugaratham/vscode-dotnet-watch/commit/b29e0cf62ae1d2ab7b5ae1abf624654d994fddf3))
+
 ### [1.1.4](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.3...v1.1.4) (2022-08-07)
 
 ### [1.1.3](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.2...v1.1.3) (2022-05-26)
