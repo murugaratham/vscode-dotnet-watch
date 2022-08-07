@@ -16,7 +16,7 @@ export default class DebuggerService implements Disposable {
    */
   public constructor() {
     this.disposables = new Set<Disposable>();
-    this.disposables.add(debug.onDidTerminateDebugSession(DebuggerService.TryToRemoveDisconnectedDebugSession));
+    //this.disposables.add(debug.onDidTerminateDebugSession(DebuggerService.TryToRemoveDisconnectedDebugSession));
     this.disposables.add(debug.onDidStartDebugSession(DebuggerService.AddDebugSession));
     //if restart debug session, do these
     vscode.debug.registerDebugAdapterTrackerFactory("*", {
