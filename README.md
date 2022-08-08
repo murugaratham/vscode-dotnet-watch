@@ -15,7 +15,7 @@ The ".NET Watch" extension is created to enable a .Net Core debugging experience
 
 ## Getting Started
 
-1. [Install the extension](https://marketplace.visualstudio.com/items?itemName=murugaratham.todo.replacewithlink)
+1. [Install the extension](https://marketplace.visualstudio.com/items?itemName=Murugaratham.vscode-dotnet-watch)
 1. Open the folder containing .net core Project(s).
 1. Press F5 and select .NET Watch
 1. Save file changes and 🤯
