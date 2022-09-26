@@ -42,8 +42,7 @@
   "homepage": "https://github.com/murugaratham/vscode-dotnet-watch",
   "activationEvents": [
     "onDebug",
-    "onLanguage:csharp",
-    "*"
+    "onLanguage:csharp"
   ],
   "main": "./out/extension",
   "contributes": {
