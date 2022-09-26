@@ -103,3 +103,7 @@ See the [CHANGELOG.md](CHANGELOG.md) for the details of changes for each version
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details.
+
+## Coffee
+
+If this extension helped you, consider buying me a [coffee](https://www.buymeacoffee.com/muru)

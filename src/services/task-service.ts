@@ -180,14 +180,17 @@ export default class TaskService implements Disposable {
    * @memberof TaskService
    */
   private CheckProjectConfig(project: string): Thenable<Uri | undefined> {
-    const decodedProject = project;
+    let decodedProject = project;
     const isCsproj = project.endsWith(".csproj");
-
+		const workspaceFolderKeyword = '${workspaceFolder}';
     // if it is not a specific file, probably only a folder name.
     if (!isCsproj) {
       return workspace.findFiles(decodedProject + "/**/*.csproj").then(this.CheckFilesFound);
     }
-
+		//this is definitely not the best way to search within workspace with user-specified ${workspaceFolder}
+		if(decodedProject.startsWith(workspaceFolderKeyword)) {
+			decodedProject = decodedProject.substring(workspaceFolderKeyword.length + 1);
+		}
     const projectUri = Uri.file(decodedProject);
 
     if (workspace.workspaceFolders != null) {

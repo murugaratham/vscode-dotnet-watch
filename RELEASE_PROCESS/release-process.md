@@ -13,9 +13,10 @@ When you are ready:
 ```sh
 git add .
 
+npm run release
+
 npm run commit
 
-npm run release
 ```
 
 Follow conventional changelog prompts.
