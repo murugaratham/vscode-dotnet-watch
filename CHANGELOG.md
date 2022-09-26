@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.8](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.6...v1.1.8) (2022-09-26)
+
+
+### Bug Fixes
+
+* **task-service:** allow user to use workspaceFolder ([f1cb8ba](https://github.com/murugaratham/vscode-dotnet-watch/commit/f1cb8ba55877bcf36da1470393639191e4c71694)), closes [#14](https://github.com/murugaratham/vscode-dotnet-watch/issues/14)
+
 ### [1.1.7](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.6...v1.1.7) (2022-09-26)
 
 ### [1.1.5](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.4...v1.1.5) (2022-08-07)
