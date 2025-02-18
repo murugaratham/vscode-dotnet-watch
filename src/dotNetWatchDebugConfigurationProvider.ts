@@ -1,32 +1,10 @@
-/*
- * @file Contains the DotNetWatchDebugConfigurationProvider.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2019-02-16 22:01:33
- * @Last Modified by: Dennis Jung
- * @Last Modified time: 2019-02-19 13:51:15
- */
-
 import { DebugConfiguration, DebugConfigurationProvider, ProviderResult, workspace, WorkspaceFolder } from "vscode";
 import DotNetWatch from "./dotNetWatch";
 import IDotNetWatchDebugConfiguration from "./interfaces/IDotNetWatchDebugConfiguration";
+import ProcessQuickPickItem from "./models/ProcessQuickPickItem";
 
-/**
- * The DotNetWatchDebugConfigurationProvider.
- *
- * @export
- * @class DotNetWatchDebugConfigurationProvider
- * @implements {DebugConfigurationProvider}
- */
 export default class DotNetWatchDebugConfigurationProvider implements DebugConfigurationProvider {
-  /**
-   * Get the default DebugConfiguration for DotNetWatch.
-   *
-   * @private
-   * @static
-   * @returns {DebugConfiguration}
-   * @memberof DotNetWatchDebugConfigurationProvider
-   */
+
   private static GetDefaultDotNetWatchDebugConfig(project?: string): DebugConfiguration {
     const defaultConfig: DebugConfiguration = {
       type: "DotNetWatch",
@@ -58,10 +36,10 @@ export default class DotNetWatchDebugConfigurationProvider implements DebugConfi
    * @param token A cancellation token.
    * @return The resolved debug configuration or undefined.
    */
-  public resolveDebugConfiguration(
+  public async resolveDebugConfiguration(
     folder: WorkspaceFolder | undefined,
     debugConfiguration: IDotNetWatchDebugConfiguration
-  ): ProviderResult<IDotNetWatchDebugConfiguration> {
+  ): Promise<IDotNetWatchDebugConfiguration | undefined> {
     if (debugConfiguration.env) {
       debugConfiguration.env["DOTNET_WATCH_RESTART_ON_RUDE_EDIT"] = "true";
     }
@@ -73,12 +51,40 @@ export default class DotNetWatchDebugConfigurationProvider implements DebugConfi
 
     if (!debugConfiguration.type) {
       // If the config doesn't look functional force VSCode to open a configuration file https://github.com/Microsoft/vscode/issues/54213
-      return null;
+      return undefined;
     }
 
-    if (folder) {
+    if (folder) { //if scanned external watch run,
       debugConfiguration.workspace = folder;
-      DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
+       // Get external dotnet watch processes
+			 const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
+
+       if (watchProcesses.length > 0) {
+         // Add "Debug current code base" as the first item
+         const quickPickItems: ProcessQuickPickItem[] = [
+           {
+						label: "Debug current code base",
+						description: "Start a new dotnet watch task"
+					},
+           ...watchProcesses.map(process => ({
+             label: `Process ID: ${process.pid}`,
+             description: process.cml,
+             process: process
+           }))
+         ];
+
+         const selectedProcess = await DotNetWatch.UiService.OpenProcessQuickPick(quickPickItems);
+
+         if (selectedProcess && selectedProcess.label === "Debug current code base") {
+           DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
+				 } else if (selectedProcess && selectedProcess.process) {
+						//DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
+						DotNetWatch.Cache.ExternalDotnetWatchProcesses.setValue(selectedProcess.process.pid, selectedProcess.process);
+          	await DotNetWatch.AttachService.AttachToProcess(selectedProcess.process);
+				 }
+			 } else {
+				 DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
+			 }
     }
     return undefined;
   }

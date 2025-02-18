@@ -18,40 +18,15 @@ import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfig
 import DotNetWatchTask from "../models/DotNetWatchTask";
 import { ILaunchSettings } from "../models/LaunchSettings";
 
-/**
- * The TaskService, provides functions to manage tasks.
- *
- * @export
- * @class TaskService
- */
 export default class TaskService implements Disposable {
-  /**
-   * Creates an instance of TaskService.
-   * @memberof TaskService
-   */
+
   public constructor() {
     this.disposables = new Set<Disposable>();
     this.disposables.add(tasks.onDidEndTask(TaskService.TryToRemoveEndedTask));
     this.disposables.add(tasks.onDidStartTaskProcess(TaskService.IsWatcherStartedSetProcessId));
   }
-
-  /**
-   * A list of all disposables.
-   *
-   * @private
-   * @type {Set<Disposable>}
-   * @memberof TaskService
-   */
   private disposables: Set<Disposable>;
 
-  /**
-   * Try's to remove the Task of the TaskEndEvent from cache.
-   *
-   * @private
-   * @static
-   * @param {TaskEndEvent} event
-   * @memberof TaskService
-   */
   private static TryToRemoveEndedTask(event: TaskEndEvent) {
     const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
     if (taskId && taskId !== "") {
@@ -59,14 +34,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Check if the started process task is a watcher task, Sets it process id.
-   *
-   * @private
-   * @static
-   * @param {TaskProcessStartEvent} event
-   * @memberof TaskService
-   */
   private static IsWatcherStartedSetProcessId(event: TaskProcessStartEvent) {
     const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
     if (DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(taskId)) {
@@ -76,14 +43,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Start a task.
-   *
-   * @private
-   * @static
-   * @param {Task} task
-   * @memberof TaskService
-   */
   private static StartTask(task: Task): void {
     if (!DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(DotNetWatchTask.GetIdFromTask(task))) {
       const tmp = tasks.executeTask(task);
@@ -96,16 +55,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Generates a Task out of a AutoAttachDebugConfiguration and a project uri path.
-   *
-   * @private
-   * @static
-   * @param {DotNetWatchDebugConfiguration} config
-   * @param {string} [project=""]
-   * @returns {Task}
-   * @memberof TaskService
-   */
   private static async GenerateTask(config: DotNetWatchDebugConfiguration, projectUri: Uri): Promise<Task> {
     const name_regex = /(^.+)(\/|\\)(.+).csproj/;
     const matches = name_regex.exec(projectUri.fsPath);
@@ -154,14 +103,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Checks the files which where found.
-   *
-   * @private
-   * @param {Array<Uri>} filesFound
-   * @returns {(Uri | undefined)}
-   * @memberof TaskService
-   */
   private CheckFilesFound(filesFound: Array<Uri>): Uri | undefined {
     filesFound.sort((a, b) => a.toString().length - b.toString().length);
     if (filesFound.length === 0 || filesFound.length > 1) {
@@ -171,14 +112,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Checks the Project config.
-   *
-   * @private
-   * @param {string} project
-   * @returns {(Thenable<Uri | undefined>)}
-   * @memberof TaskService
-   */
   private CheckProjectConfig(project: string): Thenable<Uri | undefined> {
     let decodedProject = project;
     const isCsproj = project.endsWith(".csproj");
@@ -206,13 +139,6 @@ export default class TaskService implements Disposable {
     return Promise.resolve(undefined);
   }
 
-  /**
-   * Start DotNetWatchTask when no project is configured.
-   *
-   * @private
-   * @param {DotNetWatchDebugConfiguration} config
-   * @memberof TaskService
-   */
   private StartDotNetWatchTaskNoProjectConfig(config: DotNetWatchDebugConfiguration): void {
     workspace.findFiles("**/*.csproj").then(async (k) => {
       const tmp = k.filter((m) => m.toString().startsWith(config.workspace.uri.toString()));
@@ -230,13 +156,6 @@ export default class TaskService implements Disposable {
     });
   }
 
-  /**
-   * Start DotNetWatchTask when project is configured.
-   *
-   * @private
-   * @param {DotNetWatchDebugConfiguration} config
-   * @memberof TaskService
-   */
   private StartDotNetWatchTaskWithProjectConfig(config: DotNetWatchDebugConfiguration): void {
     this.CheckProjectConfig(config.project).then(async (projectUri) => {
       if (projectUri) {
@@ -259,12 +178,6 @@ export default class TaskService implements Disposable {
     });
   }
 
-  /**
-   * Start a new DotNet Watch Task
-   *
-   * @param {DotNetWatchDebugConfiguration} config
-   * @memberof TaskService
-   */
   public StartDotNetWatchTask(config: DotNetWatchDebugConfiguration) {
     // Check if there is a no project configured
     if (!config.project || 0 === config.project.length) {
@@ -274,11 +187,6 @@ export default class TaskService implements Disposable {
     }
   }
 
-  /**
-   * Dispose.
-   *
-   * @memberof TaskService
-   */
   public dispose() {
     this.disposables.forEach((k) => {
       k.dispose();

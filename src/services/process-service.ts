@@ -40,6 +40,7 @@ export default class ProcessService implements Disposable {
       return this.getProcessDetailsFromUnix(ppid);
     }
   }
+
   /**
    * Get all ProcessDetails on unix, with ppid filter if set.
    *
@@ -131,5 +132,23 @@ export default class ProcessService implements Disposable {
       return processDetails.concat(childs);
     }
     return processDetails;
+  }
+
+  /**
+   * Get all dotnet watch processes.
+   *
+   * @returns {Array<ProcessDetail>}
+   * @memberof ProcessService
+   */
+  public GetDotNetWatchProcesses(): Array<ProcessDetail> {
+    try {
+      const processes = this.GetProcesses("");
+      return processes.filter(p =>
+        p.cml.includes("dotnet run") || p.cml.includes("dotnet watch run") || p.cml.includes("dotnet watch")
+      );
+    } catch (error) {
+      console.error("Error getting dotnet watch processes:", error);
+      return [];
+    }
   }
 }

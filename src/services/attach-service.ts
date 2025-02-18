@@ -1,12 +1,3 @@
-/*
- * @file Contains the AttachService.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2018-06-16 18:53:11
- * @Last Modified by: Dmitry Kosinov
- * @Last Modified time: 2019-02-06 16:27:08
- */
-
 import { clearInterval, setInterval } from "timers";
 import { DebugConfiguration, Disposable } from "vscode";
 import * as vscode from "vscode";
@@ -14,69 +5,16 @@ import DotNetWatch from "../dotNetWatch";
 import ProcessDetail from "../models/ProcessDetail";
 import * as fsPath from "path";
 
-/**
- * The AttachService
- *
- * @export
- * @class AttachService
- */
 export default class AttachService implements Disposable {
-  /**
-   * Creates an instance of AttachService.
-   * @memberof AttachService
-   */
   public constructor() {
     this.disposables = new Set<Disposable>();
     this.timer = undefined;
   }
 
-  /**
-   * The interval between the poll.
-   *
-   * @private
-   * @static
-   * @type {number}
-   * @memberof AttachService
-   */
   private static interval = 1000;
-
-  /**
-   * A discriminator used to determine which process to debug.
-   *
-   * @private
-   * @static
-   * @readonly
-   * @type {string}
-   * @memberof AttachService
-   */
   private static readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
-
-  /**
-   * A list of all disposables.
-   *
-   * @private
-   * @type {Set<Disposable>}
-   * @memberof AttachService
-   */
   private disposables: Set<Disposable>;
-
-  /**
-   * The poll timer.
-   *
-   * @private
-   * @type {NodeJS.Timer}
-   * @memberof AttachService
-   */
   private timer: NodeJS.Timer | undefined;
-
-  /**
-   * Get the default DebugConfiguration
-   *
-   * @private
-   * @static
-   * @returns {DebugConfiguration}
-   * @memberof AttachService
-   */
   private static GetDefaultConfig(): DebugConfiguration {
     return {
       type: "coreclr",
@@ -85,70 +23,74 @@ export default class AttachService implements Disposable {
     };
   }
 
-  /**
-   * Start the timer to scan for attach.
-   *
-   * @memberof AttachService
-   */
   public StartTimer(): void {
-    this.timer = setInterval(this.ScanToAttach, AttachService.interval);
+    this.timer = setInterval(async () => {
+      await this.ScanToAttachAutoTask();
+    }, AttachService.interval);
   }
 
-  /**
-   * Stop the timer to scan for attach.
-   *
-   * @memberof AttachService
-   */
   public StopTimer(): void {
     if (this.timer) {
       clearInterval(this.timer);
+      this.timer = undefined;
     }
   }
 
-  /**
-   * Scan processes if its attachable, then try to attach debugger.
-   *
-   * @private
-   * @memberof AttachService
-   */
-  private ScanToAttach(): void {
+  private async ScanToAttachAutoTask(): Promise<void> {
+    // Get processes from running tasks
     let processesToScan = new Array<ProcessDetail>();
     const runningTasks = DotNetWatch.Cache.RunningAutoAttachTasks;
+
     runningTasks.forEach((k, v) => {
-      if (v && v.ProcessId) {
-        processesToScan = processesToScan.concat(DotNetWatch.ProcessService.GetProcesses(v.ProcessId.toString()));
-      }
-    });
-    const matchedProcesses = new Array<number>();
-
-    processesToScan.forEach((p) => {
-      if (p.cml.includes(AttachService.processPathDiscriminator) && DotNetWatch.AttachService.CheckForWorkspace(p)) {
-        const pathRgx = /(.*)(run|--launch-profile.+|)/g;
-        const matches = pathRgx.exec(p.cml);
-        let path = "";
-        if (matches && matches.length === 3) {
-          path = matches[1];
-          matchedProcesses.push(p.pid);
+        if (v && v.ProcessId) {
+            processesToScan = processesToScan.concat(
+                DotNetWatch.ProcessService.GetProcesses(v.ProcessId.toString())
+            );
         }
-
-        DotNetWatch.DebugService.AttachDotNetDebugger(p.pid, AttachService.GetDefaultConfig(), path);
-      }
     });
+
+		// started by us
+    let matchedProcesses = processesToScan.filter(p =>
+        p.cml.includes(AttachService.processPathDiscriminator) &&
+        DotNetWatch.AttachService.CheckForWorkspace(p)
+    );
+
+ 		// Remove duplicates by process ID
+    matchedProcesses = Array.from(
+        new Map(matchedProcesses.map(p => [p.pid, p])).values(),
+    );
+
+		// exclude processes that are already being debugged
+		matchedProcesses = matchedProcesses.filter(
+			p => !DotNetWatch.Cache.RunningDebugs.keys().includes(p.pid)
+		);
+
+		if (matchedProcesses.length === 1) {
+        await this.AttachToProcess(matchedProcesses[0]);
+    }
+
     if (matchedProcesses.length > 0) {
-      //try detect if it's due to restart
-      DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses);
+        DotNetWatch.DebugService.DisconnectOldDotNetDebugger(
+            matchedProcesses.map(p => p.pid)
+        );
     }
   }
 
-  /**
-   * Check the process if it's within the current workspace.
-   *
-   * @private
-   * @static
-   * @param {ProcessDetail} process
-   * @returns {boolean}
-   * @memberof AttachService
-   */
+  public async AttachToProcess(process: ProcessDetail): Promise<void> {
+    const pathRgx = /(.*)(run|--launch-profile.+|)/g;
+    const matches = pathRgx.exec(process.cml);
+    let path = "";
+    if (matches && matches.length === 3) {
+      path = matches[1];
+    }
+
+    await DotNetWatch.DebugService.AttachDotNetDebugger(
+      process.pid,
+      AttachService.GetDefaultConfig(),
+      path
+    );
+  }
+
   private CheckForWorkspace(process: ProcessDetail): boolean {
     if (vscode.workspace.workspaceFolders) {
       for (const element of vscode.workspace.workspaceFolders) {
@@ -163,11 +105,6 @@ export default class AttachService implements Disposable {
     return false;
   }
 
-  /**
-   * Dispose.
-   *
-   * @memberof AttachService
-   */
   public dispose(): void {
     this.disposables.forEach((k) => {
       k.dispose();

@@ -1,32 +1,10 @@
-/*
- * @file Contains the UiService.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2019-02-02 10:33:23
- * @Last Modified by: Dennis Jung
- * @Last Modified time: 2019-02-23 14:54:41
- */
-
 import { Disposable, QuickPickOptions, Uri, window } from "vscode";
 import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
 import ProjectQuickPickItem from "../models/ProjectQuickPickItem";
+import ProcessQuickPickItem from '../models/ProcessQuickPickItem';
 
-/**
- * The UiService, proviedes functions for ui actions.
- *
- * @export
- * @class UiService
- */
 export default class UiService implements Disposable {
-  /**
-   * Opens a Project Quick Pick.
-   *
-   * @private
-   * @param {Uri[]} uris
-   * @returns {(Thenable<ProjectQuickPickItem | undefined>)}
-   * @memberof TaskService
-   */
-  public OpenProjectQuickPick(uris: Array<Uri>): Thenable<ProjectQuickPickItem | undefined> {
+    public OpenProjectQuickPick(uris: Array<Uri>): Thenable<ProjectQuickPickItem | undefined> {
     const quickPickOptions: QuickPickOptions = {
       canPickMany: false,
       placeHolder: "Select the project to launch the DotNet Watch task for.",
@@ -39,13 +17,6 @@ export default class UiService implements Disposable {
     );
   }
 
-  /**
-   * Opens a MultiSelectProject QuickPick.
-   *
-   * @param {Array<Uri>} uris
-   * @returns {(Thenable<Array<ProjectQuickPickItem>| undefined>)}
-   * @memberof UiService
-   */
   public OpenMultiSelectProjectQuickPick(uris: Array<Uri>): Thenable<Array<ProjectQuickPickItem> | undefined> {
     return window.showQuickPick(
       uris.map((k) => new ProjectQuickPickItem(k)),
@@ -58,24 +29,10 @@ export default class UiService implements Disposable {
     );
   }
 
-  /**
-   * Opens a Task already started Information Message.
-   *
-   * @param {string} projectName
-   * @returns {(Thenable<string | undefined>)}
-   * @memberof UiService
-   */
   public TaskAlreadyStartedInformationMessage(projectName: string): Thenable<string | undefined> {
     return window.showInformationMessage(`.NET Watch Task already started for the project  ${projectName}.`);
   }
 
-  /**
-   * Opens a ProjectDoesNotExist Error Message.
-   *
-   * @param {string} project
-   * @returns {(Thenable<string | undefined>)}
-   * @memberof UiService
-   */
   public ProjectDoesNotExistErrorMessage(debugConfig: DotNetWatchDebugConfiguration): Thenable<boolean> {
     return window
       .showErrorMessage(
@@ -91,15 +48,29 @@ export default class UiService implements Disposable {
       });
   }
 
-  /**
-   * Opens a generic Error Message.
-   *
-   * @param {string} project
-   * @returns {(Thenable<string | undefined>)}
-   * @memberof UiService
-   */
   public GenericErrorMessage(err: string) {
     return window.showErrorMessage(err);
+  }
+
+  /**
+   * Opens a Process Quick Pick.
+   *
+   * @param {Array<ProcessDetail>} processes
+   * @returns {(Thenable<ProcessQuickPickItem | undefined>)}
+   * @memberof UiService
+   */
+  public OpenProcessQuickPick(processes: Array<ProcessQuickPickItem>): Thenable<ProcessQuickPickItem | undefined> {
+    const quickPickOptions: QuickPickOptions = {
+      canPickMany: false,
+      placeHolder: "Select the .NET process to attach debugger",
+      matchOnDescription: true,
+      matchOnDetail: true
+    };
+
+    return window.showQuickPick(
+      processes.map((p) => new ProcessQuickPickItem(p.label, p.description, p.process)),
+      quickPickOptions
+    );
   }
 
   /**
