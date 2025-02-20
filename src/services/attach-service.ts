@@ -17,6 +17,7 @@ export default class AttachService implements Disposable {
 	private timer: NodeJS.Timer | undefined;
 	private static interval = 1000;
 	private alwaysReattachCml = "";
+	private answer = "";
 
 	private static GetDefaultConfig(): DebugConfiguration {
 		return {
@@ -27,16 +28,19 @@ export default class AttachService implements Disposable {
 	}
 
 	public StartTimer(): void {
+		if (this.timer !== undefined) {
+			return;
+		}
 		this.timer = setInterval(async () => {
 			await this.ScanToAttachAutoTask();
 		}, AttachService.interval);
 	}
 
 	public StopTimer(): void {
-		// Stop the timer if it is running
 		if (this.timer) {
 			clearInterval(this.timer);
 			this.timer = undefined;
+			this.answer = ""; //reset user's preference
 		}
 	}
 
@@ -64,14 +68,15 @@ export default class AttachService implements Disposable {
 			} else {
 				this.StopTimer();
 				// Show reattach prompt to the user
-				const answer = await UiService.ShowReattachPrompt(matchedExternalProcess);
-				if (answer === "Always") {
+				this.answer = await UiService.ShowReattachPrompt(matchedExternalProcess) || "";
+				if (this.answer === "Always") {
 					this.alwaysReattachCml = matchedExternalProcess.cml;
 					updateExternalProcesses(matchedExternalProcess);
-				} else if (answer === "Yes, once") {
+					DotNetWatch.AttachService.StartTimer();
+				} else if (this.answer === "Yes, once") {
 					updateExternalProcesses(matchedExternalProcess);
+					DotNetWatch.AttachService.StartTimer();
 				}
-				this.StartTimer();
 			}
 		}
 
@@ -130,5 +135,7 @@ export default class AttachService implements Disposable {
 			k.dispose();
 		});
 		this.StopTimer();
+		this.disposables.clear();
+		this.timer = undefined;
 	}
 }

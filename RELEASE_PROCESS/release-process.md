@@ -11,14 +11,17 @@ Review Changelog.md, feel free to update changelog.md to something that makes se
 When you are ready:
 
 ```sh
-git add .
 
 npm run release
 
+git add .
+
 npm run commit
-np
+
 ```
 
 Follow conventional changelog prompts.
+
+`git push --follow-tags origin main`
 
 `git push`
