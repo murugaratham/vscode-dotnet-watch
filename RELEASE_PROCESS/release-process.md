@@ -16,7 +16,7 @@ git add .
 npm run release
 
 npm run commit
-
+np
 ```
 
 Follow conventional changelog prompts.

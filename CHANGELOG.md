@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.2.1...v1.3.0) (2025-02-20)
+
+
+### Features
+
+* release 1.2.0 ([8934156](https://github.com/murugaratham/vscode-dotnet-watch/commit/8934156858e27cef54e4390579aa3db8247c7330))
+
 ## [1.2.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.8...v1.2.0) (2025-02-20)
 
 

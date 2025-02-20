@@ -96,6 +96,10 @@ Multiple projects can be debugged in a single launch by using compound tasks.
 Delete it and generate or update launch.json configuration type from `"coreclr"` to `"DotNetWatch"`
 and remove the `"preLaunchTask"`, `"program"`, `"cwd"` (feel free to add them if you need)
 
+## Watching externally executed `dotnet watch`
+
+Select the process you want to watch and let it reattach :)
+
 ## Release Notes & Known Issues
 
 See the [CHANGELOG.md](CHANGELOG.md) for the details of changes for each version and known issues.
