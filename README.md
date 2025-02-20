@@ -107,9 +107,3 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) f
 ## Coffee
 
 If this extension helped you, consider buying me a [coffee](https://www.buymeacoffee.com/muru)
-
-```json
-{
-  "csharp.debug.justMyCode": false
-}
-```

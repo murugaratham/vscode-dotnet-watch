@@ -2,13 +2,15 @@
   "trailingComma": "es5",
   "useTabs": false,
   "tabWidth": 2,
-  "printWidth": 120,
   "endOfLine": "auto",
   "overrides": [
     {
       "files": "*.ts",
       "options": {
-        "parser": "typescript"
+        "parser": "typescript",
+        "tabWidth": 2,
+        "useTabs": false,
+        "printWidth": 200
       }
     }
   ]

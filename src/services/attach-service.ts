@@ -4,111 +4,131 @@ import * as vscode from "vscode";
 import DotNetWatch from "../dotNetWatch";
 import ProcessDetail from "../models/ProcessDetail";
 import * as fsPath from "path";
+import UiService from "./ui-service";
 
 export default class AttachService implements Disposable {
-  public constructor() {
-    this.disposables = new Set<Disposable>();
-    this.timer = undefined;
-  }
+	public constructor() {
+		this.disposables = new Set<Disposable>();
+		this.timer = undefined;
+	}
 
-  private static interval = 1000;
-  private static readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
-  private disposables: Set<Disposable>;
-  private timer: NodeJS.Timer | undefined;
-  private static GetDefaultConfig(): DebugConfiguration {
-    return {
-      type: "coreclr",
-      request: "attach",
-      name: ".NET Watch",
-    };
-  }
+	public static readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
+	private disposables: Set<Disposable>;
+	private timer: NodeJS.Timer | undefined;
+	private static interval = 1000;
+	private alwaysReattachCml = "";
 
-  public StartTimer(): void {
-    this.timer = setInterval(async () => {
-      await this.ScanToAttachAutoTask();
-    }, AttachService.interval);
-  }
+	private static GetDefaultConfig(): DebugConfiguration {
+		return {
+			type: "coreclr",
+			request: "attach",
+			name: ".NET Watch",
+		};
+	}
 
-  public StopTimer(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = undefined;
-    }
-  }
+	public StartTimer(): void {
+		this.timer = setInterval(async () => {
+			await this.ScanToAttachAutoTask();
+		}, AttachService.interval);
+	}
 
-  private async ScanToAttachAutoTask(): Promise<void> {
-    // Get processes from running tasks
-    let processesToScan = new Array<ProcessDetail>();
-    const runningTasks = DotNetWatch.Cache.RunningAutoAttachTasks;
+	public StopTimer(): void {
+		// Stop the timer if it is running
+		if (this.timer) {
+			clearInterval(this.timer);
+			this.timer = undefined;
+		}
+	}
 
-    runningTasks.forEach((k, v) => {
-        if (v && v.ProcessId) {
-            processesToScan = processesToScan.concat(
-                DotNetWatch.ProcessService.GetProcesses(v.ProcessId.toString())
-            );
-        }
-    });
+	private async ScanToAttachAutoTask(): Promise<void> {
+		// Get processes to scan for attaching
+		const processesToScan = Array.from(DotNetWatch.Cache.RunningAutoAttachTasks.values())
+			.filter(task => task?.ProcessId)
+			.flatMap(task => task?.ProcessId ? DotNetWatch.ProcessService.GetProcesses(task.ProcessId.toString()) : []);
 
-		// started by us
-    let matchedProcesses = processesToScan.filter(p =>
-        p.cml.includes(AttachService.processPathDiscriminator) &&
-        DotNetWatch.AttachService.CheckForWorkspace(p)
-    );
-
- 		// Remove duplicates by process ID
-    matchedProcesses = Array.from(
-        new Map(matchedProcesses.map(p => [p.pid, p])).values(),
-    );
-
-		// exclude processes that are already being debugged
-		matchedProcesses = matchedProcesses.filter(
-			p => !DotNetWatch.Cache.RunningDebugs.keys().includes(p.pid)
+		// Get .NET watch processes
+		const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
+		const matchedExternalProcess = watchProcesses.find(p =>
+			Array.from(DotNetWatch.Cache.ExternalDotnetWatchProcesses.values()).some(wp => wp.cml === p.cml)
 		);
 
+		const updateExternalProcesses = (process: ProcessDetail) => {
+			// Update external processes cache
+			DotNetWatch.Cache.ExternalDotnetWatchProcesses.clear();
+			DotNetWatch.Cache.ExternalDotnetWatchProcesses.setValue(process.pid, process);
+		};
+
+		if (matchedExternalProcess && matchedExternalProcess.pid !== DotNetWatch.Cache.ExternalDotnetWatchProcesses.getValue(matchedExternalProcess.pid)?.pid) {
+			if (this.alwaysReattachCml === matchedExternalProcess.cml) {
+				updateExternalProcesses(matchedExternalProcess);
+			} else {
+				this.StopTimer();
+				// Show reattach prompt to the user
+				const answer = await UiService.ShowReattachPrompt(matchedExternalProcess);
+				if (answer === "Always") {
+					this.alwaysReattachCml = matchedExternalProcess.cml;
+					updateExternalProcesses(matchedExternalProcess);
+				} else if (answer === "Yes, once") {
+					updateExternalProcesses(matchedExternalProcess);
+				}
+				this.StartTimer();
+			}
+		}
+
+		// Filter matched processes
+		const matchedProcesses = processesToScan.concat(matchedExternalProcess ? [matchedExternalProcess] : [])
+			.filter(p => p.cml.includes(AttachService.processPathDiscriminator) && this.CheckForWorkspace(p))
+			.filter((p, index, self) => self.findIndex(t => t.pid === p.pid) === index)
+			.filter(p => !DotNetWatch.Cache.RunningDebugs.keys().includes(p.pid));
+
 		if (matchedProcesses.length === 1) {
-        await this.AttachToProcess(matchedProcesses[0]);
-    }
+			// Attach to the process if only one matched
+			await this.AttachToProcess(matchedProcesses[0]);
+		}
 
-    if (matchedProcesses.length > 0) {
-        DotNetWatch.DebugService.DisconnectOldDotNetDebugger(
-            matchedProcesses.map(p => p.pid)
-        );
-    }
-  }
+		if (matchedProcesses.length > 0) {
+			// Disconnect old .NET debuggers
+			DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses.map(p => p.pid));
+		}
+	}
 
-  public async AttachToProcess(process: ProcessDetail): Promise<void> {
-    const pathRgx = /(.*)(run|--launch-profile.+|)/g;
-    const matches = pathRgx.exec(process.cml);
-    let path = "";
-    if (matches && matches.length === 3) {
-      path = matches[1];
-    }
+	public async AttachToProcess(process: ProcessDetail): Promise<void> {
+		// Extract path from process command line
+		const pathRgx = /(.*)(run|--launch-profile.+|)/g;
+		const matches = pathRgx.exec(process.cml);
+		let path = "";
+		if (matches && matches.length === 3) {
+			path = matches[1];
+		}
 
-    await DotNetWatch.DebugService.AttachDotNetDebugger(
-      process.pid,
-      AttachService.GetDefaultConfig(),
-      path
-    );
-  }
+		// Attach .NET debugger to the process
+		DotNetWatch.DebugService.AttachDotNetDebugger(
+			process.pid,
+			AttachService.GetDefaultConfig(),
+			path
+		);
+	}
 
-  private CheckForWorkspace(process: ProcessDetail): boolean {
-    if (vscode.workspace.workspaceFolders) {
-      for (const element of vscode.workspace.workspaceFolders) {
-        const path = vscode.Uri.file(
-          process.cml.replace("dotnet exec ", "").replace('"dotnet" exec ', "").replace('"', "")
-        );
-        if (path.fsPath.includes(element.uri.fsPath)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
+	private CheckForWorkspace(process: ProcessDetail): boolean {
+		// Check if the process belongs to the current workspace
+		if (vscode.workspace.workspaceFolders) {
+			for (const element of vscode.workspace.workspaceFolders) {
+				const path = vscode.Uri.file(
+					process.cml.replace("dotnet exec ", "").replace('"dotnet" exec ', "").replace('"', "")
+				);
+				if (path.fsPath.includes(element.uri.fsPath)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
-  public dispose(): void {
-    this.disposables.forEach((k) => {
-      k.dispose();
-    });
-    this.StopTimer();
-  }
+	public dispose(): void {
+		// Dispose all disposables and stop the timer
+		this.disposables.forEach((k) => {
+			k.dispose();
+		});
+		this.StopTimer();
+	}
 }
