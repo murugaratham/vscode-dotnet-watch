@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.8...v1.2.0) (2025-02-20)
+
+
+### Features
+
+* allow user to automatically attach to externally executed dotnet watch process ([85d8695](https://github.com/murugaratham/vscode-dotnet-watch/commit/85d8695134f6dba0a7b93f53fbc82130c7290033)), closes [#18](https://github.com/murugaratham/vscode-dotnet-watch/issues/18)
+
 ### [1.1.8](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.1.6...v1.1.8) (2022-09-26)
 
 
