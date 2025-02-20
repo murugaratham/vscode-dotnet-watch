@@ -1,37 +1,10 @@
-/*
- * @file Contains the ProcessService.
- * @Author: Dennis Jung
- * @Author: Konrad Müller
- * @Date: 2018-06-13 20:34:03
- * @Last Modified by: Dennis Jung
- * @Last Modified time: 2018-06-16 15:09:08
- */
-
 import * as child_process from "child_process";
 import { Disposable } from "vscode";
 import ProcessDetail from "../models/ProcessDetail";
+import AttachService from "./attach-service";
 
-/**
- * The ProcessService. Provides functionality to scan and parse processes running.
- *
- * @export
- * @class ProcessService
- */
 export default class ProcessService implements Disposable {
-  /**
-   * Dispose
-   *
-   * @memberof ProcessService
-   */
   public dispose(): void {}
-
-  /**
-   * Gets all Processes, with ppid filter if set.
-   *
-   * @param {string} [ppid=""]
-   * @returns {Array<ProcessDetail>}
-   * @memberof ProcessService
-   */
   public GetProcesses(ppid = ""): Array<ProcessDetail> {
     if (process.platform === "win32") {
       return this.getProcessDetailsFromWindows(ppid);
@@ -40,14 +13,7 @@ export default class ProcessService implements Disposable {
       return this.getProcessDetailsFromUnix(ppid);
     }
   }
-  /**
-   * Get all ProcessDetails on unix, with ppid filter if set.
-   *
-   * @private
-   * @param {string} [ppid=""]
-   * @returns {Array<ProcessDetail>}
-   * @memberof ProcessService
-   */
+
   private getProcessDetailsFromUnix(ppid = ""): Array<ProcessDetail> {
     const cmlPattern = /^([0-9]+)\s+([0-9]+)\s(.+$)/;
 
@@ -89,14 +55,6 @@ export default class ProcessService implements Disposable {
     return processDetails;
   }
 
-  /**
-   * Get all ProcessDetails on windows, with ppid filter if set.
-   *
-   * @private
-   * @param {string} [ppid=""]
-   * @returns {Array<ProcessDetail>}
-   * @memberof ProcessService
-   */
   private getProcessDetailsFromWindows(ppid = ""): Array<ProcessDetail> {
     const cmlPattern = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
     let args = ["process", "get", "ProcessId,ParentProcessId,CommandLine"];
@@ -131,5 +89,15 @@ export default class ProcessService implements Disposable {
       return processDetails.concat(childs);
     }
     return processDetails;
+  }
+
+  public GetDotNetWatchProcesses(): Array<ProcessDetail> {
+    try {
+      const processes = this.GetProcesses("");
+			return processes.filter(p => p.cml.includes(AttachService.processPathDiscriminator) );
+    } catch (error) {
+      console.error("Error getting dotnet watch processes:", error);
+      return [];
+    }
   }
 }
