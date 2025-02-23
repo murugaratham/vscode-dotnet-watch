@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.2](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.4.0...v1.3.2) (2025-02-23)
+
+
+### Bug Fixes
+
+* **attach-service.ts:** fix not clearing user answer and restart starttimer ([0075792](https://github.com/murugaratham/vscode-dotnet-watch/commit/00757928542085c80b306fd6221a8cd58d29be63))
+
 ### [1.3.1](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.4.0...v1.3.1) (2025-02-20)
 
 ## [1.3.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.2.1...v1.3.0) (2025-02-20)
