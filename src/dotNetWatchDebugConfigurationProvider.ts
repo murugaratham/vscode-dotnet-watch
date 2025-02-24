@@ -1,12 +1,44 @@
-import { DebugConfiguration, DebugConfigurationProvider, ProviderResult, workspace, WorkspaceFolder } from "vscode";
-import DotNetWatch from "./dotNetWatch";
-import IDotNetWatchDebugConfiguration from "./interfaces/IDotNetWatchDebugConfiguration";
-import ProcessQuickPickItem from "./models/ProcessQuickPickItem";
+import * as vscode from 'vscode';
+import { WorkspaceFolder } from 'vscode';
+import DotNetWatch from './dotNetWatch';
+import IDotNetWatchDebugConfiguration from './interfaces/IDotNetWatchDebugConfiguration';
+import ProcessQuickPickItem from './models/ProcessQuickPickItem';
 
-export default class DotNetWatchDebugConfigurationProvider implements DebugConfigurationProvider {
+export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+	provideDebugConfigurations(
+		folder: WorkspaceFolder | undefined
+	): vscode.ProviderResult<Array<IDotNetWatchDebugConfiguration>> {
+		if (folder) {
+			return Promise.resolve(
+				vscode.workspace.findFiles("**/*.csproj").then(async (k) => {
+					const tmp = k.filter((m) => m.toString().startsWith(folder.uri.toString()));
+					if (tmp.length > 1) {
+						return await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(tmp).then((m) => {
+							if (m && m.length !== 0) {
+								return m.map((o) =>
+									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(o.label)
+								) as Array<IDotNetWatchDebugConfiguration>;
+							} else {
+								return new Array<IDotNetWatchDebugConfiguration>(
+									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
+								);
+							}
+						});
+					} else {
+						return new Array<IDotNetWatchDebugConfiguration>(
+							DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
+						);
+					}
+				})
+			);
+		}
+		return new Array<IDotNetWatchDebugConfiguration>(
+			DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
+		);
+	}
 
-	private static GetDefaultDotNetWatchDebugConfig(project?: string): DebugConfiguration {
-		const defaultConfig: DebugConfiguration = {
+	private static GetDefaultDotNetWatchDebugConfig(project?: string): vscode.DebugConfiguration {
+		const defaultConfig: vscode.DebugConfiguration = {
 			type: "DotNetWatch",
 			request: "launch",
 			name: ".NET Core Watch",
@@ -25,17 +57,6 @@ export default class DotNetWatchDebugConfigurationProvider implements DebugConfi
 		return defaultConfig;
 	}
 
-	/**
-	 * Resolves a [debug configuration](#DebugConfiguration) by filling in missing values or by adding/changing/removing attributes.
-	 * If more than one debug configuration provider is registered for the same type, the resolveDebugConfiguration calls are chained
-	 * in arbitrary order and the initial debug configuration is piped through the chain.
-	 * Returning the value 'undefined' prevents the debug session from starting.
-	 *
-	 * @param folder The workspace folder from which the configuration originates from or undefined for a folderless setup.
-	 * @param debugConfiguration The [debug configuration](#DebugConfiguration) to resolve.
-	 * @param token A cancellation token.
-	 * @return The resolved debug configuration or undefined.
-	 */
 	public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: IDotNetWatchDebugConfiguration): Promise<IDotNetWatchDebugConfiguration | undefined> {
 		debugConfiguration.env = {
 			...(debugConfiguration.env || {}),
@@ -44,8 +65,8 @@ export default class DotNetWatchDebugConfigurationProvider implements DebugConfi
 
 		debugConfiguration.args = debugConfiguration.args || [];
 
-		if (!debugConfiguration.type)
-			return undefined;
+		// if (!debugConfiguration.type)
+		// 	return undefined;
 
 		if (folder) {
 			debugConfiguration.workspace = folder;
@@ -73,46 +94,7 @@ export default class DotNetWatchDebugConfigurationProvider implements DebugConfi
 				DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
 			}
 		}
-		return undefined;
+		return debugConfiguration;
 	}
 
-	/**
- * Provides initial [debug configuration](#DebugConfiguration). If more than one debug configuration provider is
- * registered for the same type, debug configurations are concatenated in arbitrary order.
- * @param {(WorkspaceFolder | undefined)} folder The workspace folder for which the configurations are used or `undefined` for a folderless setup.
- * @param {CancellationToken} [token] A cancellation token.
- * @returns {ProviderResult<IDotNetWatchDebugConfiguration[]>} An array of [debug configurations](#DebugConfiguration).
- * @memberof DotNetWatchDebugConfigurationProvider
- */
-	public provideDebugConfigurations(
-		folder: WorkspaceFolder | undefined
-	): ProviderResult<Array<IDotNetWatchDebugConfiguration>> {
-		if (folder) {
-			return Promise.resolve(
-				workspace.findFiles("**/*.csproj").then(async (k) => {
-					const tmp = k.filter((m) => m.toString().startsWith(folder.uri.toString()));
-					if (tmp.length > 1) {
-						return await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(tmp).then((m) => {
-							if (m && m.length !== 0) {
-								return m.map((o) =>
-									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(o.label)
-								) as Array<IDotNetWatchDebugConfiguration>;
-							} else {
-								return new Array<IDotNetWatchDebugConfiguration>(
-									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
-								);
-							}
-						});
-					} else {
-						return new Array<IDotNetWatchDebugConfiguration>(
-							DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
-						);
-					}
-				})
-			);
-		}
-		return new Array<IDotNetWatchDebugConfiguration>(
-			DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
-		);
-	}
 }

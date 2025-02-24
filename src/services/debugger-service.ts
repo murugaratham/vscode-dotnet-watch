@@ -12,6 +12,9 @@ export default class DebuggerService implements Disposable {
 				return {
 					onWillReceiveMessage: (m) => {
 						if (m.command && m.command === "disconnect" && m.arguments) {
+							if (m.arguments.restart && m.arguments.restart === true) {
+								DebuggerService.TryToRemoveDisconnectedDebugSession(session);
+							}
 							const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
 							// userDisconnect is true if the user disconnects from a dotnet watch process
 							// instead of the processes being killed (externally)
@@ -19,7 +22,6 @@ export default class DebuggerService implements Disposable {
 							if (userDisconnect) {
 								DotNetWatch.AttachService.StopTimer();
 							}
-							DebuggerService.TryToRemoveDisconnectedDebugSession(session);
 						} else if (m.command && m.command === "configurationDone" && !m.arguments) {
 							DotNetWatch.AttachService.StartTimer();
 
