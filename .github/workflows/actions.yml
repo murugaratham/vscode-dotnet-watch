@@ -62,6 +62,8 @@ jobs:
           release_name: ${{ github.ref }}
           body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-watch/blob/main/CHANGELOG.md) for details.
       - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ steps.get-vsix.outputs.VSIX_PATH }}
