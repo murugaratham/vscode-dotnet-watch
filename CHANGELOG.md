@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.6](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.5...v1.3.6) (2025-03-07)
+
+### [1.3.5](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.4...v1.3.5) (2025-03-07)
+
+### [1.3.4](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.3...v1.3.4) (2025-02-24)
+
+
+### Bug Fixes
+
+* **package.json:** fix languages contribution (c#) ([0ee5eb7](https://github.com/murugaratham/vscode-dotnet-watch/commit/0ee5eb792fbd6c9280d2909fbb2b04cf99fffeab))
+
 ### [1.3.3](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.2...v1.3.3) (2025-02-24)
 
 ### [1.3.2](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.4.0...v1.3.2) (2025-02-23)

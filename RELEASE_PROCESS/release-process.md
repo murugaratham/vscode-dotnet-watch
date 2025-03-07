@@ -23,5 +23,3 @@ npm run commit
 Follow conventional changelog prompts.
 
 `git push --follow-tags origin main`
-
-`git push`

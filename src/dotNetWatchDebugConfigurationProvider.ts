@@ -5,36 +5,27 @@ import IDotNetWatchDebugConfiguration from './interfaces/IDotNetWatchDebugConfig
 import ProcessQuickPickItem from './models/ProcessQuickPickItem';
 
 export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-	provideDebugConfigurations(
+	public async provideDebugConfigurations(
 		folder: WorkspaceFolder | undefined
-	): vscode.ProviderResult<Array<IDotNetWatchDebugConfiguration>> {
-		if (folder) {
-			return Promise.resolve(
-				vscode.workspace.findFiles("**/*.csproj").then(async (k) => {
-					const tmp = k.filter((m) => m.toString().startsWith(folder.uri.toString()));
-					if (tmp.length > 1) {
-						return await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(tmp).then((m) => {
-							if (m && m.length !== 0) {
-								return m.map((o) =>
-									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(o.label)
-								) as Array<IDotNetWatchDebugConfiguration>;
-							} else {
-								return new Array<IDotNetWatchDebugConfiguration>(
-									DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
-								);
-							}
-						});
-					} else {
-						return new Array<IDotNetWatchDebugConfiguration>(
-							DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
-						);
-					}
-				})
-			);
+	): Promise<IDotNetWatchDebugConfiguration[]> {
+		if (!folder) {
+			return [DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration];
 		}
-		return new Array<IDotNetWatchDebugConfiguration>(
-			DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration
+
+		const csprojFiles = await vscode.workspace.findFiles("**/*.csproj");
+		const folderFiles = csprojFiles.filter(file =>
+			file.toString().startsWith(folder.uri.toString())
 		);
+
+		if (folderFiles.length > 1) {
+			const selectedProjects = await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(folderFiles);
+			if (selectedProjects && selectedProjects.length > 0) {
+				return selectedProjects.map(item =>
+					DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(item.label)
+				) as IDotNetWatchDebugConfiguration[];
+			}
+		}
+		return [DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration];
 	}
 
 	private static GetDefaultDotNetWatchDebugConfig(project?: string): vscode.DebugConfiguration {
@@ -57,16 +48,13 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 		return defaultConfig;
 	}
 
-	public async resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: IDotNetWatchDebugConfiguration): Promise<IDotNetWatchDebugConfiguration | undefined> {
+	public resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: IDotNetWatchDebugConfiguration) {
 		debugConfiguration.env = {
 			...(debugConfiguration.env || {}),
 			DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true",
 		};
 
 		debugConfiguration.args = debugConfiguration.args || [];
-
-		// if (!debugConfiguration.type)
-		// 	return undefined;
 
 		if (folder) {
 			debugConfiguration.workspace = folder;
@@ -81,20 +69,20 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 						process: process,
 					}))
 				];
-				const selectedProcess = await DotNetWatch.UiService.OpenProcessQuickPick(quickPickItems);
-				if (selectedProcess) {
-					if (selectedProcess.label === "Debug current code base") {
-						DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
-					} else if (selectedProcess.process) {
-						DotNetWatch.Cache.ExternalDotnetWatchProcesses.setValue(selectedProcess.process.pid, selectedProcess.process);
-						await DotNetWatch.AttachService.AttachToProcess(selectedProcess.process);
+				DotNetWatch.UiService.OpenProcessQuickPick(quickPickItems).then((value) => {
+					if (value) {
+						if (value.label === "Debug current code base") {
+							DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
+						} else if (value.process) {
+							DotNetWatch.Cache.ExternalDotnetWatchProcesses.set(value.process.pid, value.process);
+							DotNetWatch.AttachService.AttachToProcess(value.process);
+						}
 					}
-				}
+				});
 			} else {
 				DotNetWatch.TaskService.StartDotNetWatchTask(debugConfiguration);
 			}
 		}
 		return debugConfiguration;
 	}
-
 }

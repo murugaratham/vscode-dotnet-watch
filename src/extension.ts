@@ -1,20 +1,48 @@
 import * as vscode from 'vscode';
 import { DotNetWatchDebugConfigurationProvider } from './dotNetWatchDebugConfigurationProvider';
 import DotNetWatch from './dotNetWatch';
+import { ProcessTableViewProvider } from './ui/processTableViewProvider';
 
 export function activate(context: vscode.ExtensionContext) {
-	const channel = vscode.window.createOutputChannel('.NET Watch');
+	try {
+		// Create and register the view provider
+		const processTableViewProvider = new ProcessTableViewProvider();
+		const registration = vscode.window.registerWebviewViewProvider(
+			ProcessTableViewProvider.viewType,
+			processTableViewProvider
+		);
 
-	// Register debug configuration provider
-	const provider = new DotNetWatchDebugConfigurationProvider();
+		context.subscriptions.push(registration);
+	} catch (error) {
+		console.error('Error during extension activation:', error);
+	}
+
+	// Register Debug Configuration Provider
+	const debugProvider = new DotNetWatchDebugConfigurationProvider();
 	context.subscriptions.push(
-		vscode.debug.registerDebugConfigurationProvider("DotNetWatch", provider,
+		vscode.debug.registerDebugConfigurationProvider("DotNetWatch", debugProvider,
 			vscode.DebugConfigurationProviderTriggerKind.Dynamic)
 	);
+
+	// ✅ Register Debug Adapter Factory
+	const debugAdapterFactory = new DotNetWatchDebugAdapterFactory();
+	context.subscriptions.push(
+		vscode.debug.registerDebugAdapterDescriptorFactory("DotNetWatch", debugAdapterFactory)
+	);
+
 	DotNetWatch.Start();
-	channel.appendLine('Extension activated');
-	channel.appendLine('Registered debug configuration provider');
 }
+
 export function deactivate() {
 	DotNetWatch.Stop();
+}
+
+
+export class DotNetWatchDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
+	createDebugAdapterDescriptor(
+		session: vscode.DebugSession
+	): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+		// ✅ Start 'dotnet watch' as the debug adapter
+		return new vscode.DebugAdapterExecutable("dotnet", ["watch", "run", ...session.configuration.args]);
+	}
 }

@@ -21,7 +21,6 @@ export default class DotNetWatch implements Disposable {
 		this.disposables.add(
 			vscode.debug.registerDebugConfigurationProvider("DotNetWatch", new DotNetWatchDebugConfigurationProvider())
 		);
-		this.AttachService.StartTimer();
 	}
 
 	// Centralize cleanup in a single method.
@@ -29,8 +28,8 @@ export default class DotNetWatch implements Disposable {
 		DotNetWatch.Cache.dispose();
 		DotNetWatch.DebugService.dispose();
 		DotNetWatch.TaskService.dispose();
-		DotNetWatch.ProcessService.dispose();
 		DotNetWatch.AttachService.dispose();
+		DotNetWatch.ProcessService.dispose();
 		DotNetWatch.UiService.dispose();
 		DotNetWatch.disposables.forEach((d) => d.dispose());
 		DotNetWatch.disposables.clear();

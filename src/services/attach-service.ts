@@ -9,15 +9,15 @@ import UiService from "./ui-service";
 export default class AttachService implements Disposable {
 	public constructor() {
 		this.disposables = new Set<Disposable>();
-		this.timer = undefined;
+		this.autoAttachTimer = undefined;
 	}
 
-	public static readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
+	public readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
 	private disposables: Set<Disposable>;
-	private timer: NodeJS.Timer | undefined;
+	private autoAttachTimer: NodeJS.Timer | undefined;
 	private static interval = 1000;
 	private alwaysReattachCml = "";
-	private answer = "";
+	private reattachUserSelection = "";
 
 	private static GetDefaultConfig(): DebugConfiguration {
 		return {
@@ -27,30 +27,37 @@ export default class AttachService implements Disposable {
 		};
 	}
 
-	public StartTimer(): void {
-		if (this.timer !== undefined) {
+	public StartAutoAttachScanner(): void {
+		if (this.autoAttachTimer !== undefined) {
 			return;
 		}
-		this.timer = setInterval(async () => {
+		this.autoAttachTimer = setInterval(async () => {
 			await this.ScanToAttachAutoTask();
 		}, AttachService.interval);
 	}
 
-	public StopTimer(): void {
-		if (this.timer) {
-			clearInterval(this.timer);
-			this.timer = undefined;
-			this.answer = ""; //reset user's preference
+	public StopAutoAttachScanner(): void {
+		if (this.autoAttachTimer) {
+			clearInterval(this.autoAttachTimer);
+			this.autoAttachTimer = undefined;
+			this.reattachUserSelection = ""; //reset user's preference
 		}
 	}
 
+	public isScanningProcess(): boolean {
+		return this.autoAttachTimer !== undefined;
+	}
+
 	private async ScanToAttachAutoTask(): Promise<void> {
+		console.log("scanning process to attach")
+
 		// Get processes to scan for attaching
 		const processesToScan = Array.from(DotNetWatch.Cache.RunningAutoAttachTasks.values())
-			.filter(task => task?.ProcessId)
-			.flatMap(task => task?.ProcessId ? DotNetWatch.ProcessService.GetProcesses(task.ProcessId.toString()) : []);
+			.filter(task => task?.WatchProcessId)
+			.flatMap(task => task?.WatchProcessId ? DotNetWatch.ProcessService.GetProcessByPpid(task.WatchProcessId.toString()) : []);
 
-		// Get .NET watch processes
+
+		// Get all .NET watch processes
 		const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
 		const matchedExternalProcess = watchProcesses.find(p =>
 			Array.from(DotNetWatch.Cache.ExternalDotnetWatchProcesses.values()).some(wp => wp.cml === p.cml)
@@ -59,45 +66,46 @@ export default class AttachService implements Disposable {
 		const updateExternalProcesses = (process: ProcessDetail) => {
 			// Update external processes cache
 			DotNetWatch.Cache.ExternalDotnetWatchProcesses.clear();
-			DotNetWatch.Cache.ExternalDotnetWatchProcesses.setValue(process.pid, process);
+			DotNetWatch.Cache.ExternalDotnetWatchProcesses.set(process.pid, process);
 		};
 
-		if (matchedExternalProcess && matchedExternalProcess.pid !== DotNetWatch.Cache.ExternalDotnetWatchProcesses.getValue(matchedExternalProcess.pid)?.pid) {
+		if (matchedExternalProcess && matchedExternalProcess.pid !== DotNetWatch.Cache.ExternalDotnetWatchProcesses.get(matchedExternalProcess.pid)?.pid) {
 			if (this.alwaysReattachCml === matchedExternalProcess.cml) {
 				updateExternalProcesses(matchedExternalProcess);
 			} else {
-				this.StopTimer();
+				this.StopAutoAttachScanner();
 				// Show reattach prompt to the user
-				this.answer = await UiService.ShowReattachPrompt(matchedExternalProcess) || "";
-				if (this.answer === "Always") {
+				this.reattachUserSelection = await UiService.ShowReattachPrompt(matchedExternalProcess) || "";
+				if (this.reattachUserSelection === "Always") {
 					this.alwaysReattachCml = matchedExternalProcess.cml;
 					updateExternalProcesses(matchedExternalProcess);
-					DotNetWatch.AttachService.StartTimer();
-				} else if (this.answer === "Yes, once") {
+					DotNetWatch.AttachService.StartAutoAttachScanner();
+				} else if (this.reattachUserSelection === "Yes, once") {
 					updateExternalProcesses(matchedExternalProcess);
-					DotNetWatch.AttachService.StartTimer();
+					DotNetWatch.AttachService.StartAutoAttachScanner();
+				} else if (this.reattachUserSelection === "No") {
+					DotNetWatch.AttachService.StopAutoAttachScanner();
 				}
 			}
 		}
 
 		// Filter matched processes
 		const matchedProcesses = processesToScan.concat(matchedExternalProcess ? [matchedExternalProcess] : [])
-			.filter(p => p.cml.includes(AttachService.processPathDiscriminator) && this.CheckForWorkspace(p))
-			.filter((p, index, self) => self.findIndex(t => t.pid === p.pid) === index)
-			.filter(p => !DotNetWatch.Cache.RunningDebugs.keys().includes(p.pid));
+			.filter(p => p.cml.includes(this.processPathDiscriminator) && this.CheckForWorkspace(p))
+			.filter((p, index, self) => {
+				return self.findIndex(t => t.ppid === p.ppid) === index
+			})
+			.filter(p => {
+				return !DotNetWatch.Cache.RunningDebugs.has(p.pid)
+			});
 
 		if (matchedProcesses.length === 1) {
 			// Attach to the process if only one matched
 			await this.AttachToProcess(matchedProcesses[0]);
 		}
-
-		if (matchedProcesses.length > 0) {
-			// Disconnect old .NET debuggers
-			DotNetWatch.DebugService.DisconnectOldDotNetDebugger(matchedProcesses.map(p => p.pid));
-		}
 	}
 
-	public async AttachToProcess(process: ProcessDetail): Promise<void> {
+	public async AttachToProcess(process: ProcessDetail) {
 		// Extract path from process command line
 		const pathRgx = /(.*)(run|--launch-profile.+|)/g;
 		const matches = pathRgx.exec(process.cml);
@@ -134,8 +142,8 @@ export default class AttachService implements Disposable {
 		this.disposables.forEach((k) => {
 			k.dispose();
 		});
-		this.StopTimer();
+		this.StopAutoAttachScanner();
 		this.disposables.clear();
-		this.timer = undefined;
+		this.autoAttachTimer = undefined;
 	}
 }

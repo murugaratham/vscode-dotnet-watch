@@ -11,7 +11,7 @@ import {
 	TextDocument,
 	Uri,
 	window,
-	workspace,
+	workspace
 } from "vscode";
 import DotNetWatch from "../dotNetWatch";
 import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
@@ -19,7 +19,6 @@ import DotNetWatchTask from "../models/DotNetWatchTask";
 import { ILaunchSettings } from "../models/LaunchSettings";
 
 export default class TaskService implements Disposable {
-
 	public constructor() {
 		this.disposables = new Set<Disposable>();
 		this.disposables.add(tasks.onDidEndTask(TaskService.TryToRemoveEndedTask));
@@ -30,25 +29,41 @@ export default class TaskService implements Disposable {
 	private static TryToRemoveEndedTask(event: TaskEndEvent) {
 		const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
 		if (taskId && taskId !== "") {
-			DotNetWatch.Cache.RunningAutoAttachTasks.remove(taskId);
+			DotNetWatch.Cache.RunningAutoAttachTasks.delete(taskId);
 		}
 	}
 
+	public removeAndTerminateTaskByProcessId(pid: number): void {
+		const session = DotNetWatch.Cache.getDebugSession(pid);
+		if (session) {
+			const allProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
+			DotNetWatch.ProcessService.triggerProcessesUpdate(allProcesses);
+			DotNetWatch.DebugService.disconnectAndTerminateTask(pid, session.name);
+		} else {
+			DotNetWatch.UiService.GenericErrorMessage("Unable to terminate, is it an externally launched process?")
+		}
+	}
+
+
 	private static IsWatcherStartedSetProcessId(event: TaskProcessStartEvent) {
 		const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
-		if (DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(taskId)) {
-			const task = DotNetWatch.Cache.RunningAutoAttachTasks.getValue(taskId) as DotNetWatchTask;
-			task.ProcessId = event.processId;
-			DotNetWatch.Cache.RunningAutoAttachTasks.setValue(taskId, task);
+		if (DotNetWatch.Cache.RunningAutoAttachTasks.has(taskId)) {
+			const task = DotNetWatch.Cache.RunningAutoAttachTasks.get(taskId) as DotNetWatchTask;
+			task.WatchProcessId = event.processId;
+			DotNetWatch.Cache.RunningAutoAttachTasks.set(taskId, task);
 		}
 	}
 
 	private static StartTask(task: Task): void {
-		if (!DotNetWatch.Cache.RunningAutoAttachTasks.containsKey(DotNetWatchTask.GetIdFromTask(task))) {
+		const taskId = DotNetWatchTask.GetIdFromTask(task);
+		if (!DotNetWatch.Cache.RunningAutoAttachTasks.has(taskId)) {
 			const tmp = tasks.executeTask(task);
+			// reserve task id first..
+			DotNetWatch.Cache.RunningAutoAttachTasks.set(taskId, undefined);
 			tmp.then((k: TaskExecution) => {
 				const autoTask: DotNetWatchTask = new DotNetWatchTask(k);
-				DotNetWatch.Cache.RunningAutoAttachTasks.setValue(autoTask.Id, autoTask);
+				// now we populate the task.. else we might get a race
+				DotNetWatch.Cache.RunningAutoAttachTasks.set(autoTask.Id, autoTask);
 			});
 		}
 	}
@@ -75,7 +90,7 @@ export default class TaskService implements Disposable {
 			"$msCompile"
 		);
 		//setting these gives a better experience when debugging
-		task.presentationOptions.reveal = TaskRevealKind.Silent;
+		task.presentationOptions.reveal = TaskRevealKind.Always;
 		task.presentationOptions.showReuseMessage = false;
 		return task;
 	}
@@ -176,6 +191,7 @@ export default class TaskService implements Disposable {
 	}
 
 	public StartDotNetWatchTask(config: DotNetWatchDebugConfiguration) {
+		DotNetWatch.AttachService.StartAutoAttachScanner();
 		// Check if there is a no project configured
 		if (!config.project || 0 === config.project.length) {
 			this.StartDotNetWatchTaskNoProjectConfig(config);

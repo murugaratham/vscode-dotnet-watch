@@ -5,7 +5,7 @@ export default class DotNetWatchTask {
 		this._id = DotNetWatchTask.GetIdFromTask(taskExec.task);
 		this._workSpace = taskExec.task.scope as WorkspaceFolder;
 		this._taskExec = taskExec;
-		this._processId = undefined;
+		this._watchProcessId = undefined;
 
 		this._projectPath = (this._taskExec.task.execution as ProcessExecution).args[2];
 
@@ -18,11 +18,15 @@ export default class DotNetWatchTask {
 	}
 	private _id: string;
 	private _workSpace: WorkspaceFolder;
-	private _processId: number | undefined;
+	private _watchProcessId: number | undefined;
 	private _projectPath = "";
 	private _projectFolderPath = "";
 	private _project = "";
 	private _taskExec: TaskExecution;
+
+	public get task(): TaskExecution {
+		return this._taskExec;
+	}
 
 	public get Id(): string {
 		return this._id;
@@ -39,11 +43,11 @@ export default class DotNetWatchTask {
 	public get Project(): string {
 		return this._project;
 	}
-	public get ProcessId(): number | undefined {
-		return this._processId;
+	public get WatchProcessId(): number | undefined {
+		return this._watchProcessId;
 	}
-	public set ProcessId(num: number | undefined) {
-		this._processId = num;
+	public set WatchProcessId(num: number | undefined) {
+		this._watchProcessId = num;
 	}
 
 	public static GetIdFromTask(task: Task): string {
