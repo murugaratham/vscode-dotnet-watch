@@ -175,7 +175,7 @@
 		"vscode-test": "^1.2.2"
 	},
 	"lint-staged": {
-		"*.{ts}": "eslint --quiet --ext js,ts"
+		"*.ts": "eslint --quiet --ext js,ts"
 	},
 	"config": {
 		"commitizen": {
