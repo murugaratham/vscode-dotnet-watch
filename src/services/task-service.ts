@@ -19,12 +19,13 @@ import DotNetWatchTask from "../models/DotNetWatchTask";
 import { ILaunchSettings } from "../models/LaunchSettings";
 
 export default class TaskService implements Disposable {
+	private disposables: Set<Disposable>;
+
 	public constructor() {
 		this.disposables = new Set<Disposable>();
 		this.disposables.add(tasks.onDidEndTask(TaskService.TryToRemoveEndedTask));
 		this.disposables.add(tasks.onDidStartTaskProcess(TaskService.IsWatcherStartedSetProcessId));
 	}
-	private disposables: Set<Disposable>;
 
 	private static TryToRemoveEndedTask(event: TaskEndEvent) {
 		const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
@@ -32,18 +33,6 @@ export default class TaskService implements Disposable {
 			DotNetWatch.Cache.RunningAutoAttachTasks.delete(taskId);
 		}
 	}
-
-	public removeAndTerminateTaskByProcessId(pid: number): void {
-		const session = DotNetWatch.Cache.getDebugSession(pid);
-		if (session) {
-			const allProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
-			DotNetWatch.ProcessService.triggerProcessesUpdate(allProcesses);
-			DotNetWatch.DebugService.disconnectAndTerminateTask(pid, session.name);
-		} else {
-			DotNetWatch.UiService.GenericErrorMessage("Unable to terminate, is it an externally launched process?")
-		}
-	}
-
 
 	private static IsWatcherStartedSetProcessId(event: TaskProcessStartEvent) {
 		const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
@@ -79,7 +68,7 @@ export default class TaskService implements Disposable {
 		}
 		await TaskService.TryLoadLaunchProfile(launchSettingsPath, config);
 		const task: Task = new Task(
-			{ type: `Watch ${projectName}` } as TaskDefinition,
+			{ type: `DotNetWatch` } as TaskDefinition,
 			config.workspace,
 			`Watch ${projectName}`,
 			"DotNet Auto Attach",

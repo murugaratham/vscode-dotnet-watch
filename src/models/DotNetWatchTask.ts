@@ -7,6 +7,7 @@ export default class DotNetWatchTask {
 		this._taskExec = taskExec;
 		this._watchProcessId = undefined;
 
+		// assuming it's always 2nd arg as project path
 		this._projectPath = (this._taskExec.task.execution as ProcessExecution).args[2];
 
 		const name_regex = /(^.+)(\\|\/)(.+.csproj)/;
@@ -24,7 +25,7 @@ export default class DotNetWatchTask {
 	private _project = "";
 	private _taskExec: TaskExecution;
 
-	public get task(): TaskExecution {
+	public get TaskExecution(): TaskExecution {
 		return this._taskExec;
 	}
 
@@ -34,9 +35,9 @@ export default class DotNetWatchTask {
 	public get Workspace(): WorkspaceFolder {
 		return this._workSpace;
 	}
-	public get ProjectPath(): string {
-		return this._projectPath;
-	}
+	// public get ProjectPath(): string {
+	// 	return this._projectPath;
+	// }
 	public get ProjectFolderPath(): string {
 		return this._projectFolderPath;
 	}

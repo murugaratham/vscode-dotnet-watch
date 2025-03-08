@@ -1,52 +1,60 @@
-import * as vscode from "vscode";
+import { debug } from "vscode";
+import * as vscode from 'vscode';
 import { DebugSession, Disposable } from "vscode";
 import DotNetWatch from "../dotNetWatch";
 import ProcessDetail from "../models/ProcessDetail";
 import DotNetWatchTask from "../models/DotNetWatchTask";
 
-export const customDisconnect = "custom-disconnect";
-
 export default class DebuggerService implements Disposable {
+	private disposables: Set<Disposable>;
 	private readonly _onDebugParametersChanged = new vscode.EventEmitter();
 	public readonly onDebugParametersChanged = this._onDebugParametersChanged.event;
-	private disposables: Set<Disposable>;
 
 	public constructor() {
 		this.disposables = new Set<Disposable>();
+		this.disposables.add(debug.onDidTerminateDebugSession(this.removeDebugSession));
 
 		vscode.debug.registerDebugAdapterTrackerFactory("*", {
 			createDebugAdapterTracker: (session: DebugSession) => ({
 				onWillReceiveMessage: (m) => {
-					if (m.command === "disconnect") {
-						if (m.arguments?.customDisconnect === "") {
-							if (DotNetWatch.Cache.RunningDebugs.size === 0) {
-								DotNetWatch.AttachService.StopAutoAttachScanner();
-							}
+					if (m.command === "detach") {
+						this.tryToRemoveDisconnectedDebugAndTerminateSession(session);
+						this._onDebugParametersChanged.fire({});
+					} else if (m.command === "disconnect") {
+						const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
+						const cachedExternalProcess = Array.from(DotNetWatch.Cache.ExternalDotnetWatchProcesses.values());
+						const userDisconnect = watchProcesses.some(p =>
+							cachedExternalProcess.some((wp: ProcessDetail) => wp.cml === p.cml)
+						);
+						if (userDisconnect) {
 							this.tryToRemoveDisconnectedDebugAndTerminateSession(session);
-						} else {
-							const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
-							const cachedExternalProcess = Array.from(DotNetWatch.Cache.ExternalDotnetWatchProcesses.values());
-
-							const userDisconnect = watchProcesses.some(p =>
-								cachedExternalProcess.some((wp: ProcessDetail) => wp.cml === p.cml)
-							);
-
-							if (userDisconnect) {
-								this.tryToRemoveDisconnectedDebugAndTerminateSession(session);
-								DotNetWatch.AttachService.StopAutoAttachScanner();
-							}
-							if (DotNetWatch.Cache.RunningDebugs.size === 0) {
-								DotNetWatch.AttachService.StopAutoAttachScanner();
-							}
+							DotNetWatch.AttachService.StopAutoAttachScanner();
 						}
+						if (DotNetWatch.Cache.RunningDebugs.size === 0) {
+							DotNetWatch.AttachService.StopAutoAttachScanner();
+						}
+						// this._onDebugParametersChanged.fire({});
 					} else if (m.command === "attach") {
 						this.addDebugSession(session);
+						this._onDebugParametersChanged.fire({});
 					}
-
-					this._onDebugParametersChanged.fire({});
 				}
 			})
 		});
+	}
+
+	private removeDebugSession(session: DebugSession) {
+		for (const [pid, debugSession] of DotNetWatch.Cache.iterateDebugSessions()) {
+			if (debugSession.name === session.name) {
+				DotNetWatch.Cache.removeDebugSession(pid);
+			}
+		}
+		DotNetWatch.DebugService.TriggerDebugParametersChange();
+	}
+
+	// Public API
+	public TriggerDebugParametersChange(): void {
+		this._onDebugParametersChanged.fire({});
 	}
 
 	private addDebugSession(session: vscode.DebugSession): void {
@@ -60,41 +68,27 @@ export default class DebuggerService implements Disposable {
 	private tryToRemoveDisconnectedDebugAndTerminateSession(session: vscode.DebugSession): void {
 		for (const [pid, debugSession] of DotNetWatch.Cache.iterateDebugSessions()) {
 			if (debugSession.name === session.name) {
-				this.disconnectAndTerminateTask(pid, session.name);
+				this.disconnectAndTerminateTask(pid);
 				break;
 			}
 		}
 	}
 
-	public disconnectAndTerminateTask(pid: number, sessionName: string): void {
-		DotNetWatch.Cache.removeDebugSession(pid);
-		DotNetWatch.Cache.addDisconnectedDebug(pid);
-
-		for (const task of DotNetWatch.Cache.iterateAutoAttachTasks()) {
-			if (task?.Project && sessionName.toLowerCase().startsWith(task.Project.toLowerCase())) {
-				DotNetWatch.Cache.removeAutoAttachTask(sessionName);
-				if (typeof task.Terminate === "function") {
-					task.Terminate();
-				}
-				break;
-			}
-		}
-	}
-
-	public isTaskSpawnedByUs(pid: number, ppid: number): boolean {
-		for (const task of DotNetWatch.Cache.iterateAutoAttachTasks()) {
-			if (task?.WatchProcessId === pid || task?.WatchProcessId === ppid) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	public DisconnectDebugger(pid: number): void {
+	public disconnectAndTerminateTask(pid: number): void {
 		const session = DotNetWatch.Cache.getDebugSession(pid);
-		if (session) {
-			session.customRequest("disconnect", { customDisconnect: "" });
+		//! KIV
+		// DotNetWatch.Cache.removeDebugSession(pid);
+		// DotNetWatch.Cache.addDisconnectedDebug(pid);
+		// if it's no in auto attach tasks, it's started by user instead of us
+		for (const task of DotNetWatch.Cache.iterateAutoAttachTasks()) {
+			if (task?.Project && session?.name.toLowerCase().startsWith(task.Project.toLowerCase())) {
+				DotNetWatch.Cache.removeAutoAttachTask(session.name);
+				task.Terminate();
+				break;
+			}
 		}
+
+		session?.customRequest("disconnect");
 	}
 
 	public AttachDotNetDebugger(pid: number, baseConfig: vscode.DebugConfiguration, path: string): void {
@@ -105,8 +99,9 @@ export default class DebuggerService implements Disposable {
 		if (isEligible && task) {
 			this.startDebugging(pid, baseConfig, task.Project);
 		} else if (DotNetWatch.Cache.hasDisconnectedDebug(pid) && task) {
-			DotNetWatch.Cache.removeDebugSession(pid);
-			DotNetWatch.Cache.removeDisconnectedDebug(pid);
+			//! KIV
+			// DotNetWatch.Cache.removeDebugSession(pid);
+			// DotNetWatch.Cache.removeDisconnectedDebug(pid);
 			if (typeof task.Terminate === "function") {
 				task.Terminate();
 			}
@@ -138,7 +133,9 @@ export default class DebuggerService implements Disposable {
 	}
 
 	public dispose(): void {
-		this.disposables.forEach((k) => k.dispose());
+		this.disposables.forEach((k) => {
+			k.dispose();
+		});
 		this.disposables.clear();
 		this._onDebugParametersChanged.dispose();
 	}

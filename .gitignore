@@ -4,3 +4,6 @@ node_modules
 *.vsix
 obj
 bin
+coverage
+*.tsbuildinfo
+.DS_Store

@@ -1,243 +1,150 @@
 import * as child_process from "child_process";
-import ProcessDetail from "../models/ProcessDetail";
-import { Disposable, EventEmitter, Event } from "vscode";
 import * as fsPath from "path";
+import { Disposable, EventEmitter, Event } from "vscode";
+import ProcessDetail from "../models/ProcessDetail";
 
 export default class ProcessService implements Disposable {
+	// Events
 	private readonly _onProcessesUpdated = new EventEmitter<ProcessDetail[]>();
 	public readonly onProcessesUpdated: Event<ProcessDetail[]> = this._onProcessesUpdated.event;
-	private scanInterval = 5000; // maybe change this to user setting
+
+	private readonly _onScanningStateChanged = new EventEmitter();
+	public readonly onScanningStateChanged = this._onScanningStateChanged.event;
+
+	// Configuration
+	private readonly scanInterval: number = 1000; // TODO: Make this configurable via user settings
+	private readonly processPathDiscriminator = fsPath.join("", "bin", "Debug");
+
+	// State
 	private previousProcesses: ProcessDetail[] = [];
-	private processScannerTimer: NodeJS.Timer | undefined;
-	private readonly _onTimerChanged = new EventEmitter();
-	public readonly onTimerChanged = this._onTimerChanged.event;
-	private readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
+	private processScannerTimer?: NodeJS.Timer;
 
 	constructor() {
-		this.startProcessScanner();
-	}
-
-	public triggerProcessesUpdate(processes: ProcessDetail[]): void {
-		this._onProcessesUpdated.fire(processes);  // Fire the event with the updated processes
+		this.StartProcessScanner();
 	}
 
 	dispose(): void {
-		if (this.processScannerTimer) {
-			clearInterval(this.processScannerTimer);
-		}
+		this.StopProcessScanner();
 		this._onProcessesUpdated.dispose();
+		this._onScanningStateChanged.dispose();
 	}
 
-	public startProcessScanner(): void {
+	// Public API
+	public TriggerProcessesUpdate(processes: ProcessDetail[]): void {
+		this._onProcessesUpdated.fire(processes);
+	}
+
+	public StartProcessScanner(): void {
+		if (this.processScannerTimer) return;
+
 		this.processScannerTimer = setInterval(() => {
 			const processes = this.GetDotNetWatchProcesses();
-			if (JSON.stringify(processes) !== JSON.stringify(this.previousProcesses)) {
+			if (!this.areProcessListsEqual(processes, this.previousProcesses)) {
 				this.previousProcesses = processes;
 				this._onProcessesUpdated.fire(processes);
 			}
 		}, this.scanInterval);
-		this._onTimerChanged.fire({});
+		this._onScanningStateChanged.fire({});
 	}
 
 	public StopProcessScanner(): void {
 		if (this.processScannerTimer) {
 			clearInterval(this.processScannerTimer);
 			this.processScannerTimer = undefined;
-			this._onTimerChanged.fire({});
+			this.previousProcesses = [];
+			this._onScanningStateChanged.fire({});
 		}
 	}
 
-	public isScanningProcess(): boolean {
+	public IsScanningProcesses(): boolean {
 		return this.processScannerTimer !== undefined;
 	}
 
-	private GetProcesses(): Array<ProcessDetail> {
-		if (process.platform === "win32") {
-			return this.getParentProcessDetailsFromWindows();
-		} else {
-			// unix
-			return this.getParentProcessDetailsFromUnix();
-		}
-	}
-	public GetProcessByPpid(ppid: string): Array<ProcessDetail> {
-		if (process.platform === "win32") {
-			return this.getParentProcessDetailsFromWindows(ppid);
-		} else {
-			// unix
-			return this.getParentProcessDetailsFromUnix(ppid);
-		}
+	public GetProcesses(): ProcessDetail[] {
+		return this.isWindows() ? this.GetWindowsProcesses() : this.GetUnixProcesses();
 	}
 
-	public GetProcessByPid(pid: string): Array<ProcessDetail> {
-		if (process.platform === "win32") {
-			return this.getProcessDetailsFromWindows(pid);
-		} else {
-			// unix
-			return this.getProcessDetailsFromUnix(pid);
-		}
+	public GetProcessByParentId(ppid: string): ProcessDetail[] {
+		return this.isWindows() ? this.GetWindowsProcesses(ppid, true) : this.GetUnixProcesses(ppid, true);
 	}
 
-	private getParentProcessDetailsFromUnix(ppid = ""): Array<ProcessDetail> {
-		const cmlPattern = /^([0-9]+)\s+([0-9]+)\s(.+$)/;
-
-		// build and execute command line tool "ps" to get details of all running processes
-		const args = ["-o pid,ppid,command"];
-		const tmp = child_process.execSync(`ps ${args}`).toString();
-
-		// split process informations results for each process
-		const processLines = tmp
-			.split("\n")
-			.map((str) => {
-				return str.trim();
-			})
-			.filter((str) => cmlPattern.test(str));
-
-		// parse output to a ProcessDetail list
-		const processDetails = new Array<ProcessDetail>();
-		processLines.forEach((str) => {
-			const s = cmlPattern.exec(str);
-			if (
-				s &&
-				s.length === 4 && // validate regex result
-				(ppid === "" || s[2] === ppid) // i want to check by pid instead of ppid
-			) {
-				// apply parent process filter
-				processDetails.push(new ProcessDetail(s[1], s[2], s[3]));
-			}
-		});
-
-		//Find nested child processes
-		if (processDetails.length !== 0 && ppid !== "") {
-			const childs = new Array<ProcessDetail>();
-			processDetails.forEach((k) => {
-				const tmp = this.getParentProcessDetailsFromUnix(k.pid.toString());
-				tmp.forEach((l) => childs.push(l));
-			});
-			return processDetails.concat(childs);
-		}
-		return processDetails;
+	public GetProcessById(pid: string): ProcessDetail[] {
+		return this.isWindows() ? this.GetWindowsProcesses(pid, false) : this.GetUnixProcesses(pid, false);
 	}
 
-	private getParentProcessDetailsFromWindows(ppid = ""): Array<ProcessDetail> {
-		const cmlPattern = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
-		let args = ["process", "get", "ProcessId,ParentProcessId,CommandLine"];
-		if (ppid !== "") {
-			args = ["process", "where", `parentProcessId = ${ppid}`, "get", "ProcessId,ParentProcessId,CommandLine"];
-		}
-
-		const tmp = child_process.execFileSync("wmic.exe", args, {
-			encoding: "utf8",
-		});
-
-		const processLines = tmp
-			.split("\r\n")
-			.map((str) => {
-				return str.trim();
-			})
-			.filter((str) => cmlPattern.test(str));
-
-		const processDetails = new Array<ProcessDetail>();
-		processLines.forEach((str) => {
-			const s = cmlPattern.exec(str);
-			if (s && s.length === 4) {
-				processDetails.push(new ProcessDetail(s[3], s[2], s[1]));
-			}
-		});
-		if (processDetails.length !== 0 && ppid !== "") {
-			const childs = new Array<ProcessDetail>();
-			processDetails.forEach((k) => {
-				const tmp = this.getParentProcessDetailsFromWindows(k.pid.toString());
-				tmp.forEach((l) => childs.push(l));
-			});
-			return processDetails.concat(childs);
-		}
-		return processDetails;
+	public GetDotNetWatchProcesses(): ProcessDetail[] {
+		const processes = this.GetProcesses();
+		return processes.filter(p => p.cml.includes(this.processPathDiscriminator));
 	}
 
-
-	private getProcessDetailsFromUnix(pid = ""): Array<ProcessDetail> {
-		const cmlPattern = /^([0-9]+)\s+([0-9]+)\s(.+$)/;
-
-		// build and execute command line tool "ps" to get details of all running processes
-		const args = ["-o pid,ppid,command"];
-		const tmp = child_process.execSync(`ps ${args}`).toString();
-
-		// split process informations results for each process
-		const processLines = tmp
-			.split("\n")
-			.map((str) => {
-				return str.trim();
-			})
-			.filter((str) => cmlPattern.test(str));
-
-		// parse output to a ProcessDetail list
-		const processDetails = new Array<ProcessDetail>();
-		processLines.forEach((str) => {
-			const s = cmlPattern.exec(str);
-			if (
-				s &&
-				s.length === 4 && // validate regex result
-				(pid === "" || s[1] === pid) // i want to check by pid instead of ppid
-			) {
-				// apply parent process filter
-				processDetails.push(new ProcessDetail(s[1], s[2], s[3]));
-			}
-		});
-
-		//Find nested child processes
-		if (processDetails.length !== 0 && pid !== "") {
-			const childs = new Array<ProcessDetail>();
-			processDetails.forEach((k) => {
-				const tmp = this.getParentProcessDetailsFromUnix(k.pid.toString());
-				tmp.forEach((l) => childs.push(l));
-			});
-			return processDetails.concat(childs);
-		}
-		return processDetails;
+	// Private methods
+	private areProcessListsEqual(list1: ProcessDetail[], list2: ProcessDetail[]): boolean {
+		return JSON.stringify(list1) === JSON.stringify(list2);
 	}
 
-	private getProcessDetailsFromWindows(pid = ""): Array<ProcessDetail> {
-		const cmlPattern = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
-		let args = ["process", "get", "ProcessId,ParentProcessId,CommandLine"];
-		if (pid !== "") {
-			args = ["process", "where", `ProcessId = ${pid}`, "get", "ProcessId,ParentProcessId,CommandLine"];
-		}
-
-		const tmp = child_process.execFileSync("wmic.exe", args, {
-			encoding: "utf8",
-		});
-
-		const processLines = tmp
-			.split("\r\n")
-			.map((str) => {
-				return str.trim();
-			})
-			.filter((str) => cmlPattern.test(str));
-
-		const processDetails = new Array<ProcessDetail>();
-		processLines.forEach((str) => {
-			const s = cmlPattern.exec(str);
-			if (s && s.length === 4) {
-				processDetails.push(new ProcessDetail(s[3], s[2], s[1]));
-			}
-		});
-		if (processDetails.length !== 0 && pid !== "") {
-			const childs = new Array<ProcessDetail>();
-			processDetails.forEach((k) => {
-				const tmp = this.getParentProcessDetailsFromWindows(k.pid.toString());
-				tmp.forEach((l) => childs.push(l));
-			});
-			return processDetails.concat(childs);
-		}
-		return processDetails;
+	private isWindows(): boolean {
+		return process.platform === "win32";
 	}
 
-	public GetDotNetWatchProcesses(): Array<ProcessDetail> {
+	private GetUnixProcesses(identifier = "", filterByParent = true): ProcessDetail[] {
 		try {
-			const processes = this.GetProcesses();
-			return processes.filter(p => p.cml.includes(this.processPathDiscriminator));
+			const cmd = "ps -o pid,ppid,command";
+			const output = child_process.execSync(cmd).toString();
+			const processDetails: ProcessDetail[] = [];
+
+			const processLines = output
+				.split("\n")
+				.map(line => line.trim())
+				.filter(line => /^(\d+)\s+(\d+)\s(.+)$/.test(line));
+
+			for (const line of processLines) {
+				const match = /^(\d+)\s+(\d+)\s(.+)$/.exec(line);
+				if (match) {
+					const [, pid, ppid, command] = match;
+					if (!identifier || (filterByParent ? ppid === identifier : pid === identifier)) {
+						processDetails.push(new ProcessDetail(pid, ppid, command));
+					}
+				}
+			}
+
+			// Recursively Get child processes
+			return identifier
+				? [...processDetails, ...processDetails.flatMap(proc =>
+					this.GetUnixProcesses(proc.pid + "", filterByParent))]
+				: processDetails;
 		} catch (error) {
-			console.error("Error getting dotnet watch processes:", error);
+			console.error("Error Getting Unix processes:", error);
+			return [];
+		}
+	}
+
+	private GetWindowsProcesses(identifier = "", filterByParent = true): ProcessDetail[] {
+		try {
+			let command = "Get-CimInstance -ClassName Win32_Process";
+			if (identifier) {
+				command += ` -Filter "${filterByParent ? "ParentProcessId" : "ProcessId"}=${identifier}"`;
+			}
+			command += " | Select-Object ProcessId, ParentProcessId, CommandLine | Format-Table -HideTableHeaders";
+
+			const output = child_process.execFileSync("powershell.exe", ["-Command", command], { encoding: "utf8" });
+			const processDetails: ProcessDetail[] = [];
+
+			const processLines = output.trim().split("\r\n");
+			for (const line of processLines) {
+				const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
+				if (match) {
+					const [, pid, parentPid, commandLine] = match;
+					processDetails.push(new ProcessDetail(pid, parentPid, commandLine));
+				}
+			}
+
+			// Recursively Get child processes
+			return identifier
+				? [...processDetails, ...processDetails.flatMap(proc =>
+					this.GetWindowsProcesses(proc.pid + "", filterByParent))]
+				: processDetails;
+		} catch (error) {
+			console.error("Error Getting Windows processes:", error);
 			return [];
 		}
 	}

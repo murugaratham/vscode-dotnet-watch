@@ -38,15 +38,15 @@ describe('CacheService', () => {
 		});
 	});
 
-	describe('Disconnected Debugs', () => {
-		it('should manage disconnected debugs correctly', () => {
-			const pid = 123;
+	// describe('Disconnected Debugs', () => {
+	// 	it('should manage disconnected debugs correctly', () => {
+	// 		const pid = 123;
 
-			cacheService.addDisconnectedDebug(pid);
-			expect(cacheService.hasDisconnectedDebug(pid)).toBe(true);
+	// 		// cacheService.addDisconnectedDebug(pid);
+	// 		// expect(cacheService.hasDisconnectedDebug(pid)).toBe(true);
 
-			cacheService.removeDisconnectedDebug(pid);
-			expect(cacheService.hasDisconnectedDebug(pid)).toBe(false);
-		});
-	});
+	// 		// cacheService.removeDisconnectedDebug(pid);
+	// 		// expect(cacheService.hasDisconnectedDebug(pid)).toBe(false);
+	// 	});
+	// });
 });

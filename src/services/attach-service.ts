@@ -8,12 +8,10 @@ import UiService from "./ui-service";
 
 export default class AttachService implements Disposable {
 	public constructor() {
-		this.disposables = new Set<Disposable>();
 		this.autoAttachTimer = undefined;
 	}
 
 	public readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
-	private disposables: Set<Disposable>;
 	private autoAttachTimer: NodeJS.Timer | undefined;
 	private static interval = 1000;
 	private alwaysReattachCml = "";
@@ -34,28 +32,31 @@ export default class AttachService implements Disposable {
 		this.autoAttachTimer = setInterval(async () => {
 			await this.ScanToAttachAutoTask();
 		}, AttachService.interval);
+		//DotNetWatch.DebugService.TriggerDebugParametersChange();
 	}
 
 	public StopAutoAttachScanner(): void {
+		this.disposeTimer();
+		// DotNetWatch.DebugService.TriggerDebugParametersChange();
+	}
+
+	private disposeTimer() {
 		if (this.autoAttachTimer) {
 			clearInterval(this.autoAttachTimer);
 			this.autoAttachTimer = undefined;
-			this.reattachUserSelection = ""; //reset user's preference
+			this.reattachUserSelection = "";
 		}
 	}
 
-	public isScanningProcess(): boolean {
+	public IsScanningToAttach(): boolean {
 		return this.autoAttachTimer !== undefined;
 	}
 
 	private async ScanToAttachAutoTask(): Promise<void> {
-		console.log("scanning process to attach")
-
 		// Get processes to scan for attaching
 		const processesToScan = Array.from(DotNetWatch.Cache.RunningAutoAttachTasks.values())
 			.filter(task => task?.WatchProcessId)
-			.flatMap(task => task?.WatchProcessId ? DotNetWatch.ProcessService.GetProcessByPpid(task.WatchProcessId.toString()) : []);
-
+			.flatMap(task => task?.WatchProcessId ? DotNetWatch.ProcessService.GetProcessByParentId(task.WatchProcessId.toString()) : []);
 
 		// Get all .NET watch processes
 		const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
@@ -138,12 +139,7 @@ export default class AttachService implements Disposable {
 	}
 
 	public dispose(): void {
-		// Dispose all disposables and stop the timer
-		this.disposables.forEach((k) => {
-			k.dispose();
-		});
+		this.disposeTimer();
 		this.StopAutoAttachScanner();
-		this.disposables.clear();
-		this.autoAttachTimer = undefined;
 	}
 }

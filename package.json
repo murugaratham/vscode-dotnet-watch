@@ -121,6 +121,7 @@
 		"views": {
 			"debug": [
 				{
+					"icon": "",
 					"id": "watched-processes",
 					"name": "Watched Processes",
 					"type": "webview",
@@ -132,6 +133,11 @@
 			{
 				"command": "extension.refreshProcesses",
 				"title": "Refresh Process Table"
+			}
+		],
+		"taskDefinitions": [
+			{
+				"type": "DotNetWatch"
 			}
 		]
 	},
