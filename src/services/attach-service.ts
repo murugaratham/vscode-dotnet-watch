@@ -32,12 +32,10 @@ export default class AttachService implements Disposable {
 		this.autoAttachTimer = setInterval(async () => {
 			await this.ScanToAttachAutoTask();
 		}, AttachService.interval);
-		//DotNetWatch.DebugService.TriggerDebugParametersChange();
 	}
 
 	public StopAutoAttachScanner(): void {
 		this.disposeTimer();
-		// DotNetWatch.DebugService.TriggerDebugParametersChange();
 	}
 
 	private disposeTimer() {
@@ -69,8 +67,9 @@ export default class AttachService implements Disposable {
 			DotNetWatch.Cache.ExternalDotnetWatchProcesses.clear();
 			DotNetWatch.Cache.ExternalDotnetWatchProcesses.set(process.pid, process);
 		};
-
-		if (matchedExternalProcess && matchedExternalProcess.pid !== DotNetWatch.Cache.ExternalDotnetWatchProcesses.get(matchedExternalProcess.pid)?.pid) {
+		console.log(DotNetWatch.Cache)
+		const newProcess = DotNetWatch.Cache.ExternalDotnetWatchProcesses.get(matchedExternalProcess ? matchedExternalProcess.pid : -1);
+		if (matchedExternalProcess && matchedExternalProcess.pid !== newProcess?.pid) {
 			if (this.alwaysReattachCml === matchedExternalProcess.cml) {
 				updateExternalProcesses(matchedExternalProcess);
 			} else {

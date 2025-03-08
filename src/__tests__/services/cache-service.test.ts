@@ -37,16 +37,4 @@ describe('CacheService', () => {
 			expect(cacheService.getExternalProcess(pid)).toBe(mockProcess);
 		});
 	});
-
-	// describe('Disconnected Debugs', () => {
-	// 	it('should manage disconnected debugs correctly', () => {
-	// 		const pid = 123;
-
-	// 		// cacheService.addDisconnectedDebug(pid);
-	// 		// expect(cacheService.hasDisconnectedDebug(pid)).toBe(true);
-
-	// 		// cacheService.removeDisconnectedDebug(pid);
-	// 		// expect(cacheService.hasDisconnectedDebug(pid)).toBe(false);
-	// 	});
-	// });
 });

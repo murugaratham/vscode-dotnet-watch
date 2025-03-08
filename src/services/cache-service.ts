@@ -47,10 +47,6 @@ export default class CacheService implements Disposable {
 		this.DisconnectedDebugs.add(pid);
 	}
 
-	public removeDisconnectedDebug(pid: number): void {
-		this.DisconnectedDebugs.delete(pid);
-	}
-
 	public addRunningDebugSession(pid: number, session: DebugSession): void {
 		this.RunningDebugs.set(pid, session);
 	}

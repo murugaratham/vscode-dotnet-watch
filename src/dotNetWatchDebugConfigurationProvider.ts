@@ -1,17 +1,20 @@
 import * as vscode from 'vscode';
-import { WorkspaceFolder } from 'vscode';
+import { WorkspaceFolder, DebugConfiguration } from 'vscode';
 import DotNetWatch from './dotNetWatch';
-import IDotNetWatchDebugConfiguration from './interfaces/IDotNetWatchDebugConfiguration';
-import ProcessQuickPickItem from './models/ProcessQuickPickItem';
 
-export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-	public async provideDebugConfigurations(
-		folder: WorkspaceFolder | undefined
-	): Promise<IDotNetWatchDebugConfiguration[]> {
+export interface DotNetWatchDebugConfiguration extends DebugConfiguration {
+	workspace: WorkspaceFolder;
+	args: string[];
+	env?: { [key: string]: string };
+	project: string;
+}
+
+
+export class DebugConfigProvider implements vscode.DebugConfigurationProvider {
+	public async provideDebugConfigurations(folder: WorkspaceFolder | undefined) {
 		if (!folder) {
-			return [DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration];
+			return [DebugConfigProvider.GetDefaultDotNetWatchDebugConfig()];
 		}
-
 		const csprojFiles = await vscode.workspace.findFiles("**/*.csproj");
 		const folderFiles = csprojFiles.filter(file =>
 			file.toString().startsWith(folder.uri.toString())
@@ -21,11 +24,11 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 			const selectedProjects = await DotNetWatch.UiService.OpenMultiSelectProjectQuickPick(folderFiles);
 			if (selectedProjects && selectedProjects.length > 0) {
 				return selectedProjects.map(item =>
-					DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig(item.label)
-				) as IDotNetWatchDebugConfiguration[];
+					DebugConfigProvider.GetDefaultDotNetWatchDebugConfig(item.label)
+				);
 			}
 		}
-		return [DotNetWatchDebugConfigurationProvider.GetDefaultDotNetWatchDebugConfig() as IDotNetWatchDebugConfiguration];
+		return [DebugConfigProvider.GetDefaultDotNetWatchDebugConfig()];
 	}
 
 	private static GetDefaultDotNetWatchDebugConfig(project?: string): vscode.DebugConfiguration {
@@ -35,11 +38,9 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 			name: ".NET Core Watch",
 			env: {
 				ASPNETCORE_ENVIRONMENT: "Development",
-				//wait for this pr: https://github.com/dotnet/sdk/pull/23280/files
 				DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true",
 			},
 		};
-
 		if (project && project.length !== 0) {
 			defaultConfig.project = `${project}.csproj`;
 			defaultConfig.name += `: ${project}`;
@@ -48,10 +49,9 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 		return defaultConfig;
 	}
 
-	public resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: IDotNetWatchDebugConfiguration) {
+	public resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DotNetWatchDebugConfiguration) {
 		debugConfiguration.env = {
-			...(debugConfiguration.env || {}),
-			DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true",
+			...(debugConfiguration.env || {})
 		};
 
 		debugConfiguration.args = debugConfiguration.args || [];
@@ -61,7 +61,7 @@ export class DotNetWatchDebugConfigurationProvider implements vscode.DebugConfig
 			const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
 
 			if (watchProcesses.length > 0) {
-				const quickPickItems: ProcessQuickPickItem[] = [
+				const quickPickItems = [
 					{ label: "Debug current code base", description: "Start a new dotnet watch task" },
 					...watchProcesses.map(process => ({
 						label: `Process ID: ${process.pid}`,

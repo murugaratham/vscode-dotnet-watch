@@ -2,7 +2,6 @@ import {
 	Disposable,
 	ProcessExecution,
 	Task,
-	TaskDefinition,
 	TaskEndEvent,
 	TaskExecution,
 	TaskProcessStartEvent,
@@ -14,9 +13,9 @@ import {
 	workspace
 } from "vscode";
 import DotNetWatch from "../dotNetWatch";
-import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
+
 import DotNetWatchTask from "../models/DotNetWatchTask";
-import { ILaunchSettings } from "../models/LaunchSettings";
+import { DotNetWatchDebugConfiguration } from "../dotNetWatchDebugConfigurationProvider";
 
 export default class TaskService implements Disposable {
 	private disposables: Set<Disposable>;
@@ -67,8 +66,9 @@ export default class TaskService implements Disposable {
 			launchSettingsPath = `${matches[1]}/Properties/launchSettings.json`;
 		}
 		await TaskService.TryLoadLaunchProfile(launchSettingsPath, config);
+		const taskDefinition = { type: 'DotNetWatch ' };
 		const task: Task = new Task(
-			{ type: `DotNetWatch` } as TaskDefinition,
+			taskDefinition,
 			config.workspace,
 			`Watch ${projectName}`,
 			"DotNet Auto Attach",
@@ -84,28 +84,25 @@ export default class TaskService implements Disposable {
 		return task;
 	}
 
+	//! is this really neccesary? we are not even using the return value?? need to create more example project and test it out
 	private static async TryLoadLaunchProfile(launchSettingsPath: string, config: DotNetWatchDebugConfiguration) {
 		try {
 			const fulfilled = async (launchSettingsDocument: TextDocument) => {
-				const launchSettings: ILaunchSettings = JSON.parse(launchSettingsDocument.getText());
+				const launchSettings = JSON.parse(launchSettingsDocument.getText());
 				//naively attempt to load first launch profile, until we know how to handle compound launch configurations
 				return launchSettings.profiles && Object.keys(launchSettings.profiles)[0];
 			};
-
 			const selectedLaunchProfile = await workspace.openTextDocument(launchSettingsPath).then(fulfilled);
-
 			if (selectedLaunchProfile) {
 				config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
 			}
 		} catch (error) {
 			if (!(<Error>error).message.startsWith("cannot open file"))
-				DotNetWatch.UiService.GenericErrorMessage(
-					`Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`
-				);
+				window.showErrorMessage(`Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`);
 		}
 	}
 
-	private CheckFilesFound(filesFound: Array<Uri>): Uri | undefined {
+	private CheckFilesFound(filesFound: Uri[]): Uri | undefined {
 		filesFound.sort((a, b) => a.toString().length - b.toString().length);
 		if (filesFound.length === 0 || filesFound.length > 1) {
 			return undefined;
@@ -115,44 +112,42 @@ export default class TaskService implements Disposable {
 	}
 
 	private CheckProjectConfig(project: string): Thenable<Uri | undefined> {
-		let decodedProject = project;
 		const isCsproj = project.endsWith(".csproj");
 		const workspaceFolderKeyword = '${workspaceFolder}';
 		// if it is not a specific file, probably only a folder name.
 		if (!isCsproj) {
-			return workspace.findFiles(decodedProject + "/**/*.csproj").then(this.CheckFilesFound);
+			return workspace.findFiles(project + "/**/*.csproj").then(this.CheckFilesFound);
 		}
 		//this is definitely not the best way to search within workspace with user-specified ${workspaceFolder}
-		if (decodedProject.startsWith(workspaceFolderKeyword)) {
-			decodedProject = decodedProject.substring(workspaceFolderKeyword.length + 1);
+		if (project.startsWith(workspaceFolderKeyword)) {
+			project = project.substring(workspaceFolderKeyword.length + 1);
 		}
-		const projectUri = Uri.file(decodedProject);
+		const projectUri = Uri.file(project);
 
 		if (workspace.workspaceFolders != null) {
 			// probably full path, resolve like it is
-			if (decodedProject.startsWith(workspace.workspaceFolders[0].uri.fsPath)) {
+			if (project.startsWith(workspace.workspaceFolders[0].uri.fsPath)) {
 				return Promise.resolve(projectUri);
 			} else {
 				// if it is not a full path but only a name of a .csproj file
-				return workspace.findFiles("**/" + decodedProject).then(this.CheckFilesFound);
+				return workspace.findFiles("**/" + project).then(this.CheckFilesFound);
 			}
 		}
-
 		return Promise.resolve(undefined);
 	}
 
 	private StartDotNetWatchTaskNoProjectConfig(config: DotNetWatchDebugConfiguration): void {
 		workspace.findFiles("**/*.csproj").then(async (k) => {
-			const tmp = k.filter((m) => m.toString().startsWith(config.workspace.uri.toString()));
-			if (tmp.length > 1) {
-				DotNetWatch.UiService.OpenProjectQuickPick(tmp).then(async (s) => {
-					if (s) {
-						const task = await TaskService.GenerateTask(config, s.uri);
+			const csProjFiles = k.filter((m) => m.toString().startsWith(config.workspace.uri.toString()));
+			if (csProjFiles.length > 1) {
+				DotNetWatch.UiService.OpenProjectQuickPick(csProjFiles).then(async (project) => {
+					if (project) {
+						const task = await TaskService.GenerateTask(config, project.uri);
 						TaskService.StartTask(task);
 					}
 				});
 			} else {
-				const task = await TaskService.GenerateTask(config, tmp[0]);
+				const task = await TaskService.GenerateTask(config, csProjFiles[0]);
 				TaskService.StartTask(task);
 			}
 		});

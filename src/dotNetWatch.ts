@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Disposable } from "vscode";
-import { DotNetWatchDebugConfigurationProvider } from "./dotNetWatchDebugConfigurationProvider";
+import { DebugConfigProvider } from "./dotNetWatchDebugConfigurationProvider";
 import AttachService from "./services/attach-service";
 import CacheService from "./services/cache-service";
 import DebuggerService from "./services/debugger-service";
@@ -19,7 +19,7 @@ export default class DotNetWatch implements Disposable {
 
 	public static Start(): void {
 		this.disposables.add(
-			vscode.debug.registerDebugConfigurationProvider("DotNetWatch", new DotNetWatchDebugConfigurationProvider())
+			vscode.debug.registerDebugConfigurationProvider("DotNetWatch", new DebugConfigProvider())
 		);
 	}
 

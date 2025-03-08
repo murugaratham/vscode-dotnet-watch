@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.6...v1.4.0) (2025-03-08)
+
+
+### Features
+
+* **processtableviewprovider.ts:** add loading indicator to webview ([cb6b95a](https://github.com/murugaratham/vscode-dotnet-watch/commit/cb6b95ae1b42b25d41fe113da79d81089ca143a0))
+
 ### [1.3.6](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.5...v1.3.6) (2025-03-07)
 
 ### [1.3.5](https://github.com/murugaratham/vscode-dotnet-watch/compare/v1.3.4...v1.3.5) (2025-03-07)

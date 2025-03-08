@@ -1,11 +1,11 @@
 import { Disposable, QuickPickOptions, Uri, window } from "vscode";
-import DotNetWatchDebugConfiguration from "../interfaces/IDotNetWatchDebugConfiguration";
 import ProjectQuickPickItem from "../models/ProjectQuickPickItem";
-import ProcessQuickPickItem from '../models/ProcessQuickPickItem';
 import ProcessDetail from "../models/ProcessDetail";
+import ProcessQuickPickItem from "../models/ProcessQuickPickItem";
+import { DotNetWatchDebugConfiguration } from "../dotNetWatchDebugConfigurationProvider";
 
 export default class UiService implements Disposable {
-	public OpenProjectQuickPick(uris: Array<Uri>): Thenable<ProjectQuickPickItem | undefined> {
+	public OpenProjectQuickPick(uris: Uri[]) {
 		const quickPickOptions: QuickPickOptions = {
 			canPickMany: false,
 			placeHolder: "Select the project to launch the DotNet Watch task for.",
@@ -18,7 +18,7 @@ export default class UiService implements Disposable {
 		);
 	}
 
-	public OpenMultiSelectProjectQuickPick(uris: Array<Uri>): Thenable<Array<ProjectQuickPickItem> | undefined> {
+	public OpenMultiSelectProjectQuickPick(uris: Uri[]) {
 		return window.showQuickPick(
 			uris.map((k) => new ProjectQuickPickItem(k)),
 			{
@@ -30,7 +30,7 @@ export default class UiService implements Disposable {
 		);
 	}
 
-	public ProjectDoesNotExistErrorMessage(debugConfig: DotNetWatchDebugConfiguration): Thenable<boolean> {
+	public ProjectDoesNotExistErrorMessage(debugConfig: DotNetWatchDebugConfiguration) {
 		return window
 			.showErrorMessage(
 				`The debug configuration '${debugConfig.name}' within the launch.json references a project that cannot be found or is not unique (${debugConfig.project}).`,
@@ -45,11 +45,7 @@ export default class UiService implements Disposable {
 			});
 	}
 
-	public GenericErrorMessage(err: string) {
-		return window.showErrorMessage(err);
-	}
-
-	public OpenProcessQuickPick(processes: Array<ProcessQuickPickItem>): Thenable<ProcessQuickPickItem | undefined> {
+	public OpenProcessQuickPick(processes: ProcessQuickPickItem[]) {
 		const quickPickOptions: QuickPickOptions = {
 			canPickMany: false,
 			placeHolder: "Select the .NET process to attach debugger",

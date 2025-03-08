@@ -35,9 +35,6 @@ export default class DotNetWatchTask {
 	public get Workspace(): WorkspaceFolder {
 		return this._workSpace;
 	}
-	// public get ProjectPath(): string {
-	// 	return this._projectPath;
-	// }
 	public get ProjectFolderPath(): string {
 		return this._projectFolderPath;
 	}
@@ -49,9 +46,7 @@ export default class DotNetWatchTask {
 	}
 	public set WatchProcessId(num: number | undefined) {
 		this._watchProcessId = num;
-	}
-
-	public static GetIdFromTask(task: Task): string {
+	} public static GetIdFromTask(task: Task): string {
 		if (task.scope) {
 			if ((task.scope as WorkspaceFolder).name) {
 				return task.source + task.name + (task.scope as WorkspaceFolder).name;

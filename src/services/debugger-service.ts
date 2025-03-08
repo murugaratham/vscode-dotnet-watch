@@ -23,17 +23,12 @@ export default class DebuggerService implements Disposable {
 					} else if (m.command === "disconnect") {
 						const watchProcesses = DotNetWatch.ProcessService.GetDotNetWatchProcesses();
 						const cachedExternalProcess = Array.from(DotNetWatch.Cache.ExternalDotnetWatchProcesses.values());
-						const userDisconnect = watchProcesses.some(p =>
+						const userDetachInsteadOfCtrlR = watchProcesses.some(p =>
 							cachedExternalProcess.some((wp: ProcessDetail) => wp.cml === p.cml)
 						);
-						if (userDisconnect) {
+						if (userDetachInsteadOfCtrlR) {
 							this.tryToRemoveDisconnectedDebugAndTerminateSession(session);
-							DotNetWatch.AttachService.StopAutoAttachScanner();
 						}
-						if (DotNetWatch.Cache.RunningDebugs.size === 0) {
-							DotNetWatch.AttachService.StopAutoAttachScanner();
-						}
-						// this._onDebugParametersChanged.fire({});
 					} else if (m.command === "attach") {
 						this.addDebugSession(session);
 						this._onDebugParametersChanged.fire({});
@@ -47,6 +42,7 @@ export default class DebuggerService implements Disposable {
 		for (const [pid, debugSession] of DotNetWatch.Cache.iterateDebugSessions()) {
 			if (debugSession.name === session.name) {
 				DotNetWatch.Cache.removeDebugSession(pid);
+				DotNetWatch.Cache.addDisconnectedDebug(pid);
 			}
 		}
 		DotNetWatch.DebugService.TriggerDebugParametersChange();
@@ -76,10 +72,6 @@ export default class DebuggerService implements Disposable {
 
 	public disconnectAndTerminateTask(pid: number): void {
 		const session = DotNetWatch.Cache.getDebugSession(pid);
-		//! KIV
-		// DotNetWatch.Cache.removeDebugSession(pid);
-		// DotNetWatch.Cache.addDisconnectedDebug(pid);
-		// if it's no in auto attach tasks, it's started by user instead of us
 		for (const task of DotNetWatch.Cache.iterateAutoAttachTasks()) {
 			if (task?.Project && session?.name.toLowerCase().startsWith(task.Project.toLowerCase())) {
 				DotNetWatch.Cache.removeAutoAttachTask(session.name);
@@ -98,13 +90,10 @@ export default class DebuggerService implements Disposable {
 
 		if (isEligible && task) {
 			this.startDebugging(pid, baseConfig, task.Project);
-		} else if (DotNetWatch.Cache.hasDisconnectedDebug(pid) && task) {
-			//! KIV
-			// DotNetWatch.Cache.removeDebugSession(pid);
-			// DotNetWatch.Cache.removeDisconnectedDebug(pid);
-			if (typeof task.Terminate === "function") {
-				task.Terminate();
-			}
+		} else if (DotNetWatch.Cache.hasDisconnectedDebug(pid)) {
+			if (task) task.Terminate();
+			DotNetWatch.Cache.ExternalDotnetWatchProcesses.delete(pid);
+			DotNetWatch.Cache.DisconnectedDebugs.delete(pid);
 		} else if (process && !DotNetWatch.Cache.hasDebugSession(pid)) {
 			this.startDebugging(pid, baseConfig, process.cml);
 		}
