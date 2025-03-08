@@ -40,9 +40,6 @@ jobs:
       - run: yarn install
       - run: npm install -g vsce
       - run: vsce package
-      - run: |
-          echo "VSIX_PATH=$(find . -maxdepth 1 -type f -iname "*.vsix" | head -1)" >> $GITHUB_OUTPUT
-          echo "VSIX_NAME=$(basename $(find . -maxdepth 1 -type f -iname "*.vsix" | head -1))" >> $GITHUB_OUTPUT
       - uses: actions/create-release@v1
         id: create_release
         env:
@@ -51,6 +48,8 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-watch/blob/main/CHANGELOG.md) for details.
+      - run: echo "VSIX_PATH=$(find . -maxdepth 1 -type f -iname "*.vsix" | head -1)" >> $GITHUB_OUTPUT
+      - run: echo "VSIX_NAME=$(basename $(find . -maxdepth 1 -type f -iname "*.vsix" | head -1))" >> $GITHUB_OUTPUT
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
