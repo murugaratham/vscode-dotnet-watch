@@ -3,6 +3,12 @@ import ProcessDetail from "../models/ProcessDetail";
 import { Disposable, EventEmitter, Event } from "vscode";
 import * as fsPath from "path";
 
+type WindowsProcessDto = {
+	ProcessId: number;
+	ParentProcessId: number;
+	CommandLine: string | null;
+};
+
 export default class ProcessService implements Disposable {
 	private readonly _onProcessesUpdated = new EventEmitter<ProcessDetail[]>();
 	public readonly onProcessesUpdated: Event<ProcessDetail[]> = this._onProcessesUpdated.event;
@@ -119,37 +125,34 @@ export default class ProcessService implements Disposable {
 	}
 
   private getParentProcessDetailsFromWindows(ppid = ""): Array<ProcessDetail> {
-    // Define the PowerShell command
-    let psCommand = "Get-CimInstance -ClassName Win32_Process";
+		if(ppid !== "" && Number.isNaN(parseInt(ppid))) return [];
+
+    // Compose the PowerShell command
+    let psCommand = "@(Get-CimInstance -ClassName Win32_Process";
 
     if (ppid !== "") {
         psCommand += ` -Filter "ParentProcessId=${ppid}"`;
     }
 
-		psCommand += " | Select-Object ProcessId, ParentProcessId, CommandLine | Format-Table -HideTableHeaders";
+		psCommand += " | Select-Object -Property ProcessId,ParentProcessId,CommandLine -ExpandProperty CommandLine) | ConvertTo-Json -Compress";
 
 		// Execute the PowerShell command
-    const output = child_process.execFileSync("powershell.exe", ["-Command", psCommand], { encoding: "utf8" });
+    const output = child_process.execFileSync("powershell.exe", ["-Command", psCommand], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
 
-		// Process the output
-		const processDetails = new Array<ProcessDetail>();
-    const processLines = output.trim().split("\r\n");
-		processLines.forEach(line => {
-			// Split the line based on whitespace, but account for spaces within the CommandLine
-			const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
-			if(match){
-				const [, pid, parentPid, commandLine] = match;
-				processDetails.push(new ProcessDetail(pid, parentPid, commandLine));
-			}
-		});
+		if (output.length === 0)  return [];
+
+		// Parse command output
+		const pd = <WindowsProcessDto[]>JSON.parse(output, (key, value) => (key === "ProcessId" || key === "ParentProcessId") ? parseInt(value) : value);
+
+		const processDetails = Array.from(pd).map<ProcessDetail>((d) => ({
+			pid: d.ProcessId,
+			ppid: d.ParentProcessId,
+			cml: d.CommandLine ?? ""
+		}));
 
 		// Recursively get child processes if a parent process ID is provided
     if (processDetails.length !== 0 && ppid !== "") {
-      const childs = new Array<ProcessDetail>();
-      processDetails.forEach((k) => {
-        const tmp = this.getParentProcessDetailsFromWindows(k.pid.toString());
-        tmp.forEach((l) => childs.push(l));
-      });
+      const childs = processDetails.flatMap((k) => this.getParentProcessDetailsFromWindows(k.pid.toString()));
       return processDetails.concat(childs);
     }
     return processDetails;
@@ -198,38 +201,36 @@ export default class ProcessService implements Disposable {
 	}
 
 	private getProcessDetailsFromWindows(pid = ""): Array<ProcessDetail> {
-		const cmlPattern = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
-		let args = ["process", "get", "ProcessId,ParentProcessId,CommandLine"];
-		if (pid !== "") {
-			args = ["process", "where", `ProcessId = ${pid}`, "get", "ProcessId,ParentProcessId,CommandLine"];
-		}
+		if(pid !== "" && Number.isNaN(parseInt(pid))) return [];
 
-		const tmp = child_process.execFileSync("wmic.exe", args, {
-			encoding: "utf8",
-		});
+		// Compose the PowerShell command
+    let psCommand = "@(Get-CimInstance -ClassName Win32_Process";
 
-		const processLines = tmp
-			.split("\r\n")
-			.map((str) => {
-				return str.trim();
-			})
-			.filter((str) => cmlPattern.test(str));
+    if (pid !== "") {
+        psCommand += ` -Filter "ProcessId=${pid}"`;
+    }
 
-		const processDetails = new Array<ProcessDetail>();
-		processLines.forEach((str) => {
-			const s = cmlPattern.exec(str);
-			if (s && s.length === 4) {
-				processDetails.push(new ProcessDetail(s[3], s[2], s[1]));
-			}
-		});
-		if (processDetails.length !== 0 && pid !== "") {
-			const childs = new Array<ProcessDetail>();
-			processDetails.forEach((k) => {
-				const tmp = this.getParentProcessDetailsFromWindows(k.pid.toString());
-				tmp.forEach((l) => childs.push(l));
-			});
-			return processDetails.concat(childs);
-		}
+    psCommand += " | Select-Object -Property ProcessId,ParentProcessId,CommandLine -ExpandProperty CommandLine) | ConvertTo-Json -Compress";
+
+		// Execute the PowerShell command
+    const output = child_process.execFileSync("powershell.exe", ["-Command", psCommand], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
+
+		if (output.length === 0) return [];
+
+		// Parse command output
+		const pd = <WindowsProcessDto[]>JSON.parse(output, (key, value) => (key === "ProcessId" || key === "ParentProcessId") ? parseInt(value) : value);
+
+    const processDetails = Array.from(pd).map<ProcessDetail>((d) => ({
+			pid: d.ProcessId,
+			ppid: d.ParentProcessId,
+			cml: d.CommandLine ?? ""
+		}));
+
+		// Recursively get child processes if a parent process ID is provided
+    if (processDetails.length !== 0 && pid !== "") {
+      const childs = processDetails.flatMap((k) => this.getParentProcessDetailsFromWindows(k.pid.toString()));
+      return processDetails.concat(childs);
+    }
 		return processDetails;
 	}
 
