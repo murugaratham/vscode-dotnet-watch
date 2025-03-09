@@ -3,6 +3,12 @@ import * as fsPath from "path";
 import { Disposable, EventEmitter, Event } from "vscode";
 import ProcessDetail from "../models/ProcessDetail";
 
+type WindowsProcessDto = {
+	ProcessId: number;
+	ParentProcessId: number;
+	CommandLine: string | null;
+};
+
 export default class ProcessService implements Disposable {
 	// Events
 	private readonly _onProcessesUpdated = new EventEmitter<ProcessDetail[]>();
@@ -119,26 +125,33 @@ export default class ProcessService implements Disposable {
 	}
 
 	private GetWindowsProcesses(identifier = "", filterByParent = true): ProcessDetail[] {
+		if(identifier !== "" && Number.isNaN(parseInt(identifier))) return [];
+
 		try {
-			let command = "Get-CimInstance -ClassName Win32_Process";
+			// Compose the PowerShell command
+			let command = "@(Get-CimInstance -ClassName Win32_Process";
+
 			if (identifier) {
 				command += ` -Filter "${filterByParent ? "ParentProcessId" : "ProcessId"}=${identifier}"`;
 			}
-			command += " | Select-Object ProcessId, ParentProcessId, CommandLine | Format-Table -HideTableHeaders";
 
-			const output = child_process.execFileSync("powershell.exe", ["-Command", command], { encoding: "utf8" });
-			const processDetails: ProcessDetail[] = [];
+			command += " | Select-Object -Property ProcessId,ParentProcessId,CommandLine -ExpandProperty CommandLine) | ConvertTo-Json -Compress";
 
-			const processLines = output.trim().split("\r\n");
-			for (const line of processLines) {
-				const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
-				if (match) {
-					const [, pid, parentPid, commandLine] = match;
-					processDetails.push(new ProcessDetail(pid, parentPid, commandLine));
-				}
-			}
+			// Execute the PowerShell command
+			const output = child_process.execFileSync("powershell.exe", ["-Command", command], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
 
-			// Recursively Get child processes
+			if (output.length === 0)  return [];
+
+			// Parse command output
+			const pd = <WindowsProcessDto[]>JSON.parse(output, (key, value) => (key === "ProcessId" || key === "ParentProcessId") ? parseInt(value) : value);
+
+			const processDetails = Array.from(pd).map<ProcessDetail>((d) => ({
+				pid: d.ProcessId,
+				ppid: d.ParentProcessId,
+				cml: d.CommandLine ?? ""
+			}));
+
+			// Recursively get child processes if a parent process ID is provided
 			return identifier
 				? [...processDetails, ...processDetails.flatMap(proc =>
 					this.GetWindowsProcesses(proc.pid + "", filterByParent))]
