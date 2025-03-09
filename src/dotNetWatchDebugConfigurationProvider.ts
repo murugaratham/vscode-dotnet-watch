@@ -5,7 +5,7 @@ import DotNetWatch from './dotNetWatch';
 export interface DotNetWatchDebugConfiguration extends DebugConfiguration {
 	workspace: WorkspaceFolder;
 	args: string[];
-	env?: { [key: string]: string };
+	env?: Record<string, string>;
 	project: string;
 }
 
@@ -51,7 +51,7 @@ export class DebugConfigProvider implements vscode.DebugConfigurationProvider {
 
 	public resolveDebugConfiguration(folder: WorkspaceFolder | undefined, debugConfiguration: DotNetWatchDebugConfiguration) {
 		debugConfiguration.env = {
-			...(debugConfiguration.env || {})
+			...(debugConfiguration.env ?? {})
 		};
 
 		debugConfiguration.args = debugConfiguration.args || [];
@@ -64,7 +64,7 @@ export class DebugConfigProvider implements vscode.DebugConfigurationProvider {
 				const quickPickItems = [
 					{ label: "Debug current code base", description: "Start a new dotnet watch task" },
 					...watchProcesses.map(process => ({
-						label: `Process ID: ${process.pid}`,
+						label: `Process ID: ${process.pid as unknown as string}`,
 						description: process.cml,
 						process: process,
 					}))

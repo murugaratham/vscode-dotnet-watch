@@ -31,7 +31,9 @@ export class ProcessTableViewProvider implements vscode.WebviewViewProvider {
 		DotNetWatch.DebugService.onDebugParametersChanged(() => {
 			this.refresh();
 		});;
-		DotNetWatch.ProcessService.onScanningStateChanged(() => this.refresh());
+		DotNetWatch.ProcessService.onScanningStateChanged(() => {
+			this.refresh();
+		});
 	}
 
 	resolveWebviewView(webviewView: vscode.WebviewView) {

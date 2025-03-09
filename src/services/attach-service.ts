@@ -12,7 +12,7 @@ export default class AttachService implements Disposable {
 	}
 
 	public readonly processPathDiscriminator = ["", "bin", "Debug"].join(fsPath.sep);
-	private autoAttachTimer: NodeJS.Timer | undefined;
+	private autoAttachTimer: NodeJS.Timeout | undefined;
 	private static interval = 1000;
 	private alwaysReattachCml = "";
 	private reattachUserSelection = "";
@@ -29,6 +29,7 @@ export default class AttachService implements Disposable {
 		if (this.autoAttachTimer !== undefined) {
 			return;
 		}
+		 
 		this.autoAttachTimer = setInterval(async () => {
 			await this.ScanToAttachAutoTask();
 		}, AttachService.interval);
@@ -75,7 +76,7 @@ export default class AttachService implements Disposable {
 			} else {
 				this.StopAutoAttachScanner();
 				// Show reattach prompt to the user
-				this.reattachUserSelection = await UiService.ShowReattachPrompt(matchedExternalProcess) || "";
+				this.reattachUserSelection = await UiService.ShowReattachPrompt(matchedExternalProcess) ?? "";
 				if (this.reattachUserSelection === "Always") {
 					this.alwaysReattachCml = matchedExternalProcess.cml;
 					updateExternalProcesses(matchedExternalProcess);
@@ -101,11 +102,11 @@ export default class AttachService implements Disposable {
 
 		if (matchedProcesses.length === 1) {
 			// Attach to the process if only one matched
-			await this.AttachToProcess(matchedProcesses[0]);
+			this.AttachToProcess(matchedProcesses[0]);
 		}
 	}
 
-	public async AttachToProcess(process: ProcessDetail) {
+	public AttachToProcess(process: ProcessDetail) {
 		// Extract path from process command line
 		const pathRgx = /(.*)(run|--launch-profile.+|)/g;
 		const matches = pathRgx.exec(process.cml);

@@ -3,11 +3,11 @@ import * as fsPath from "path";
 import { Disposable, EventEmitter, Event } from "vscode";
 import ProcessDetail from "../models/ProcessDetail";
 
-type WindowsProcessDto = {
+interface WindowsProcessDto {
 	ProcessId: number;
 	ParentProcessId: number;
 	CommandLine: string | null;
-};
+}
 
 export default class ProcessService implements Disposable {
 	// Events
@@ -23,7 +23,7 @@ export default class ProcessService implements Disposable {
 
 	// State
 	private previousProcesses: ProcessDetail[] = [];
-	private processScannerTimer?: NodeJS.Timer;
+	private processScannerTimer?: NodeJS.Timeout;
 
 	constructor() {
 		this.StartProcessScanner();
@@ -116,7 +116,7 @@ export default class ProcessService implements Disposable {
 			// Recursively Get child processes
 			return identifier
 				? [...processDetails, ...processDetails.flatMap(proc =>
-					this.GetUnixProcesses(proc.pid + "", filterByParent))]
+					this.GetUnixProcesses(proc.pid as unknown as string, filterByParent))]
 				: processDetails;
 		} catch (error) {
 			console.error("Error Getting Unix processes:", error);
@@ -125,7 +125,7 @@ export default class ProcessService implements Disposable {
 	}
 
 	private GetWindowsProcesses(identifier = "", filterByParent = true): ProcessDetail[] {
-		if(identifier !== "" && Number.isNaN(parseInt(identifier))) return [];
+		if (identifier !== "" && Number.isNaN(parseInt(identifier))) return [];
 
 		try {
 			// Compose the PowerShell command
@@ -140,10 +140,10 @@ export default class ProcessService implements Disposable {
 			// Execute the PowerShell command
 			const output = child_process.execFileSync("powershell.exe", ["-Command", command], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
 
-			if (output.length === 0)  return [];
+			if (output.length === 0) return [];
 
 			// Parse command output
-			const pd = <WindowsProcessDto[]>JSON.parse(output, (key, value) => (key === "ProcessId" || key === "ParentProcessId") ? parseInt(value) : value);
+			const pd = JSON.parse(output, (key, value) => (key === "ProcessId" || key === "ParentProcessId") ? parseInt(value) : value) as WindowsProcessDto[];
 
 			const processDetails = Array.from(pd).map<ProcessDetail>((d) => ({
 				pid: d.ProcessId,
@@ -154,7 +154,7 @@ export default class ProcessService implements Disposable {
 			// Recursively get child processes if a parent process ID is provided
 			return identifier
 				? [...processDetails, ...processDetails.flatMap(proc =>
-					this.GetWindowsProcesses(proc.pid + "", filterByParent))]
+					this.GetWindowsProcesses((proc.pid as unknown as string), filterByParent))]
 				: processDetails;
 		} catch (error) {
 			console.error("Error Getting Windows processes:", error);

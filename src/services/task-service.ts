@@ -36,8 +36,8 @@ export default class TaskService implements Disposable {
 	private static IsWatcherStartedSetProcessId(event: TaskProcessStartEvent) {
 		const taskId = DotNetWatchTask.GetIdFromTask(event.execution.task);
 		if (DotNetWatch.Cache.RunningAutoAttachTasks.has(taskId)) {
-			const task = DotNetWatch.Cache.RunningAutoAttachTasks.get(taskId) as DotNetWatchTask;
-			task.WatchProcessId = event.processId;
+			const task = DotNetWatch.Cache.RunningAutoAttachTasks.get(taskId);
+			if (task) task.WatchProcessId = event.processId;
 			DotNetWatch.Cache.RunningAutoAttachTasks.set(taskId, task);
 		}
 	}
@@ -97,7 +97,7 @@ export default class TaskService implements Disposable {
 				config.args = config.args.concat(`--launch-profile ${selectedLaunchProfile}`);
 			}
 		} catch (error) {
-			if (!(<Error>error).message.startsWith("cannot open file"))
+			if (!(error as Error).message.startsWith("cannot open file"))
 				window.showErrorMessage(`Error loading launch profile [${launchSettingsPath}]: ${(error as Error).message}`);
 		}
 	}

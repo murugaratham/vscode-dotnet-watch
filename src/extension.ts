@@ -29,10 +29,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Register a task provider
 	const taskProvider: vscode.TaskProvider = {
-		provideTasks: async () => {
+		provideTasks: () => {
 			return [];
 		},
-		resolveTask: async (task: vscode.Task): Promise<vscode.Task | undefined> => {
+		resolveTask: (task: vscode.Task) => {
 			if (task.definition.type === "DotNetWatch") return task;
 			return undefined;
 		}
