@@ -40,22 +40,22 @@ jobs:
       - run: yarn install
       - run: npm install -g vsce
       - run: vsce package
-      # - run: echo "VSIX_PATH=$(find . -maxdepth 1 -type f -iname "*.vsix" | head -1)" >> $GITHUB_ENV
-      # - run: echo "VSIX_NAME=$(basename $(find . -maxdepth 1 -type f -iname "*.vsix" | head -1))" >> $GITHUB_ENV
-      # - uses: actions/create-release@v1
-      #   id: create_release
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     tag_name: ${{ github.ref }}
-      #     release_name: ${{ github.ref }}
-      #     body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-watch/blob/main/CHANGELOG.md) for details.
-      # - uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: ${{ env.VSIX_PATH }}
-      #     asset_name: ${{ env.VSIX_NAME }}
-      #     asset_content_type: application/zip
+      - run: echo "VSIX_PATH=$(find . -maxdepth 1 -type f -iname "*.vsix" | head -1)" >> $GITHUB_ENV
+      - run: echo "VSIX_NAME=$(basename $(find . -maxdepth 1 -type f -iname "*.vsix" | head -1))" >> $GITHUB_ENV
+      - uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: See [CHANGE LOG](https://github.com/murugaratham/vscode-dotnet-watch/blob/main/CHANGELOG.md) for details.
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.VSIX_PATH }}
+          asset_name: ${{ env.VSIX_NAME }}
+          asset_content_type: application/zip
       - run: vsce publish -p ${{ secrets.MARKETPLACE_TOKEN }}
